@@ -76,7 +76,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("VoiceDock")
                         .font(.headline)
-                    Text("0.0.7")
+                    Text("0.0.10")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -155,22 +155,12 @@ struct SettingsView: View {
                     .frame(width: 260)
                 }
                 settingRow("Transcription mode") {
-                    Picker("", selection: $settings.transcriptionMode) {
-                        ForEach(TranscriptionMode.allCases) { mode in Text(mode.title).tag(mode) }
-                    }
-                    .labelsHidden()
-                    .frame(width: 340)
+                    Text(TranscriptionMode.fileUploadAfterRelease.title)
+                        .foregroundStyle(.secondary)
                 }
-                if settings.transcriptionMode == .streamingCompletedRecording {
-                    Text("Experimental: completed-recording streaming did not show a stable speed win. File upload remains recommended.")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-                if settings.transcriptionMode == .realtimeMicrophoneStreaming {
-                    Text("Experimental/unstable: realtime websocket works technically, but Russian accuracy and lifecycle are worse. Fallback stays enabled.")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
+                Text("Recommended default. The experimental modes are hidden in Debug because they did not show a stable latency/quality win.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             SettingsCard("Behavior") {
@@ -181,6 +171,10 @@ struct SettingsView: View {
                 Toggle("Paste automatically", isOn: $settings.pasteAutomatically)
                 Toggle("Prefer speed over quality", isOn: $settings.preferSpeedOverQuality)
                     .help("Uses file upload + gpt-4o-mini-transcribe + disables post-processing.")
+                Toggle("Sound feedback", isOn: $settings.soundFeedbackEnabled)
+                    .help("Uses short custom VoiceDock tones, not macOS system sounds.")
+                Toggle("Haptic feedback", isOn: $settings.hapticFeedbackEnabled)
+                    .help("Subtle haptic only on release/success/error; no haptic on recording start.")
                 Toggle("Keep last audio for debugging", isOn: $settings.keepLastAudioForDebugging)
             }
 
@@ -246,6 +240,9 @@ struct SettingsView: View {
                 statusLine("Status", hotkeyManager.statusMessage)
                 statusLine("Transcription", hotkeyManager.lastTranscriptionModeStatus)
                 statusLine("Paste", hotkeyManager.lastPasteStatus)
+                if !hotkeyManager.lastError.isEmpty {
+                    statusLine("Last error", hotkeyManager.lastError)
+                }
             }
 
             if !hotkeyManager.lastProcessedText.isEmpty {
@@ -330,6 +327,19 @@ struct SettingsView: View {
                 statusLine("Transcription", recordingTranscriptionStatus)
             }
 
+            SettingsCard("Experimental transcription modes") {
+                settingRow("Mode") {
+                    Picker("", selection: $settings.transcriptionMode) {
+                        ForEach(TranscriptionMode.allCases) { mode in Text(mode.title).tag(mode) }
+                    }
+                    .labelsHidden()
+                    .frame(width: 360)
+                }
+                Text("File upload is recommended. Completed-recording stream is not true live microphone streaming. Realtime remains unstable for Russian/short phrases and falls back to file upload.")
+                    .font(.caption)
+                    .foregroundStyle(settings.transcriptionMode == .fileUploadAfterRelease ? Color.secondary : Color.orange)
+            }
+
             SettingsCard("Sample audio") {
                 HStack {
                     Button("Transcribe Sample Audio…") { Task { await transcribeSampleAudio() } }
@@ -342,10 +352,44 @@ struct SettingsView: View {
 
             SettingsCard("HUD states") {
                 HStack {
-                    ForEach([HUDState.listening, .transcribing, .pasted, .error]) { state in
+                    ForEach([HUDState.listening, .transcribing, .pasted, .error, .modeChanged]) { state in
                         Button(state.title) { hudController.show(state) }
                     }
                     Button("Hide") { hudController.hide() }
+                }
+            }
+
+            SettingsCard("Feedback test") {
+                HStack {
+                    Button("Start Haptic") { FeedbackService.shared.recordingStarted() }
+                    Button("Release") { FeedbackService.shared.recordingEnded() }
+                    Button("Success") { FeedbackService.shared.success() }
+                    Button("Error") { FeedbackService.shared.error() }
+                }
+                Text("If sounds play but haptics do not, macOS/device may not expose haptic feedback to this app/session. Sounds remain independent.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            SettingsCard("Logs") {
+                settingRow("Local log") {
+                    Text(LocalLogger.shared.logFilePath())
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                }
+                Button("Copy Log Path") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(LocalLogger.shared.logFilePath(), forType: .string)
+                }
+            }
+
+            SettingsCard("Reset") {
+                Text("Reset local app settings. OpenAI key is kept unless you delete it in OpenAI section.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Reset App Settings") {
+                    settings.resetToDefaults()
+                    NSApp.delegate.flatMap { $0 as? AppDelegate }?.applyActivationPolicy()
                 }
             }
         }
@@ -501,7 +545,7 @@ struct SettingsView: View {
 
     private var lastRecordingDescription: String {
         guard let url = audioRecorder.lastRecordingURL else { return "none" }
-        return "\(url.lastPathComponent), \(audioRecorder.lastRecordingDurationMs) ms, \(audioRecorder.lastRecordingSizeBytes) bytes"
+        return "\(url.lastPathComponent), \(audioRecorder.lastRecordingDurationMs) ms, \(audioRecorder.lastRecordingSizeBytes) bytes, peak \(String(format: "%.2f", audioRecorder.lastRecordingPeakLevel))"
     }
 
     private func requestMicrophonePermission() async {

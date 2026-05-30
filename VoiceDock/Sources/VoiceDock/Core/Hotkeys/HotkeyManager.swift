@@ -25,6 +25,7 @@ final class HotkeyManager: ObservableObject {
     private let postProcessor = PromptPostProcessor()
 
     private let minimumRecordingDurationMs = 300
+    private let silencePeakLevelThreshold = 0.14
     private let maximumRecordingDurationSeconds: UInt64 = 120
     private var hotkeyPressedAt: Date?
     private var hotkeyReleasedAt: Date?
@@ -124,8 +125,10 @@ final class HotkeyManager: ObservableObject {
         statusMessage = "Fn pressed: starting recording…"
 
         do {
+            LocalLogger.shared.info("recording_start requested mic_status=\(PermissionsManager.shared.microphonePermissionDescription().replacingOccurrences(of: " ", with: "_"))")
             try await AudioRecorder.shared.startRecording()
             recordingStartedAt = Date()
+            FeedbackService.shared.recordingStarted()
             FloatingHUDController.shared.show(.listening)
             statusMessage = "Recording while Fn is held…"
             scheduleMaximumRecordingTimeout()
@@ -146,7 +149,9 @@ final class HotkeyManager: ObservableObject {
         } catch {
             lastError = error.localizedDescription
             statusMessage = error.localizedDescription
-            FloatingHUDController.shared.show(.error)
+            LocalLogger.shared.error("recording_start failed error=\(error.localizedDescription)")
+            FeedbackService.shared.error()
+            FloatingHUDController.shared.show(.error, message: "Recording error")
         }
     }
 
@@ -175,16 +180,34 @@ final class HotkeyManager: ObservableObject {
             metrics.hotkeyUpToAudioFinalizedMs = Int(Date().timeIntervalSince(stopStartedAt) * 1000)
             metrics.recordingDurationMs = AudioRecorder.shared.lastRecordingDurationMs
             metrics.audioFileSizeBytes = AudioRecorder.shared.lastRecordingSizeBytes
+            FeedbackService.shared.recordingEnded()
             FloatingHUDController.shared.show(.transcribing)
 
-            guard let url else { throw AudioRecorderError.noRecording }
+            guard let url else {
+                statusMessage = "No active recording; ignored."
+                metrics.errorType = "no_recording_ignored"
+                MetricsStore.shared.add(metrics)
+                LocalLogger.shared.info("dictation ignored reason=no_recording")
+                return
+            }
 
             if AudioRecorder.shared.lastRecordingDurationMs < minimumRecordingDurationMs {
                 statusMessage = "Recording too short; ignored."
-                FloatingHUDController.shared.hide()
+                FloatingHUDController.shared.show(.modeChanged, message: "Too short")
                 AudioRecorder.shared.deleteLastRecordingIfNeeded(keepForDebugging: AppSettings.shared.keepLastAudioForDebugging)
-                metrics.errorType = "recording_too_short"
+                metrics.errorType = "recording_too_short_ignored"
                 MetricsStore.shared.add(metrics)
+                LocalLogger.shared.info("dictation ignored reason=recording_too_short duration_ms=\(AudioRecorder.shared.lastRecordingDurationMs)")
+                return
+            }
+
+            if AudioRecorder.shared.lastRecordingPeakLevel < silencePeakLevelThreshold {
+                statusMessage = "No voice detected; ignored."
+                FloatingHUDController.shared.show(.modeChanged, message: "No voice")
+                AudioRecorder.shared.deleteLastRecordingIfNeeded(keepForDebugging: AppSettings.shared.keepLastAudioForDebugging)
+                metrics.errorType = "no_voice_detected_ignored"
+                MetricsStore.shared.add(metrics)
+                LocalLogger.shared.info("dictation ignored reason=no_voice_detected duration_ms=\(AudioRecorder.shared.lastRecordingDurationMs) peak=\(String(format: "%.3f", AudioRecorder.shared.lastRecordingPeakLevel)) threshold=\(silencePeakLevelThreshold)")
                 return
             }
 
@@ -193,6 +216,7 @@ final class HotkeyManager: ObservableObject {
             let context = TranscriptionContext(promptMode: AppSettings.shared.promptMode, model: AppSettings.shared.sttModel.rawValue)
             let result = try await transcribe(audioURL: url, context: context)
             metrics.transcriptionDurationMs = Int(Date().timeIntervalSince(transcriptionStartedAt) * 1000)
+            LocalLogger.shared.info("dictation transcription_success chars=\(result.text.count) duration_ms=\(result.durationMs) effective_mode=\(effectiveTranscriptionMode.rawValue)")
             metrics.transcriptionMode = effectiveTranscriptionMode
 
             lastTranscript = result.text
@@ -201,6 +225,7 @@ final class HotkeyManager: ObservableObject {
             let postprocessStartedAt = Date()
             let output = try await finalOutput(from: result.text)
             metrics.postprocessDurationMs = Int(Date().timeIntervalSince(postprocessStartedAt) * 1000)
+            LocalLogger.shared.info("dictation final_output_success chars=\(output.text.count) postprocess_duration_ms=\(metrics.postprocessDurationMs ?? 0) mode=\(output.mode.rawValue) risky=\(output.isRiskyTerminalCommand)")
             let textToDeliver = output.isRiskyTerminalCommand ? SafetyClassifier.riskyPreview(command: output.text) : output.text
             lastDeliverableText = textToDeliver
             lastDeliverableWasRisky = output.isRiskyTerminalCommand
@@ -218,17 +243,22 @@ final class HotkeyManager: ObservableObject {
                     metrics.pasteDurationMs = Int(Date().timeIntervalSince(pasteStartedAt) * 1000)
                     lastPasteStatus = "Pasted automatically; clipboard restored."
                     metrics.success = true
+                    FeedbackService.shared.success()
                     FloatingHUDController.shared.show(.pasted)
                 } catch {
-                    lastPasteStatus = error.localizedDescription
+                    lastPasteStatus = "Auto-paste failed; copied to clipboard. \(error.localizedDescription)"
                     metrics.errorType = String(describing: type(of: error))
-                    FloatingHUDController.shared.show(.error)
+                    metrics.success = true
+                    LocalLogger.shared.error("dictation paste_failed copied_to_clipboard=true accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false)) error=\(error.localizedDescription)")
+                    FeedbackService.shared.success()
+                    FloatingHUDController.shared.show(.pasted, message: "Copied")
                 }
             } else {
                 try ClipboardPasteService.shared.copyOnly(textToDeliver)
                 metrics.pasteDurationMs = 0
                 metrics.success = true
                 lastPasteStatus = "Copied to clipboard. Paste manually."
+                FeedbackService.shared.success()
                 FloatingHUDController.shared.show(.pasted)
             }
 
@@ -241,6 +271,8 @@ final class HotkeyManager: ObservableObject {
             lastError = error.localizedDescription
             statusMessage = error.localizedDescription
             metrics.errorType = String(describing: type(of: error))
+            LocalLogger.shared.error("dictation failed stage=record_transcribe_or_postprocess error_type=\(String(describing: type(of: error))) error=\(error.localizedDescription)")
+            FeedbackService.shared.error()
             if let releasedAt = hotkeyReleasedAt {
                 metrics.totalReleaseToPasteMs = Int(Date().timeIntervalSince(releasedAt) * 1000)
             }

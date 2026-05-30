@@ -86,7 +86,7 @@ swift run VoiceDock
 - Realtime mode experimental и не рекомендуется для everyday use.
 - HUD пока bottom-center fixed, без draggable position.
 
-## 0.0.10 groundwork
+## 0.0.10 packaging groundwork
 
 ### Build `.app`
 
@@ -96,7 +96,7 @@ cd VoiceDock
 open dist/VoiceDock.app
 ```
 
-The script creates an ad-hoc signed local app bundle at:
+The script creates an ad-hoc signed local app bundle with generated `AppIcon.icns` at:
 
 ```text
 VoiceDock/dist/VoiceDock.app
@@ -113,10 +113,19 @@ While holding Fn/Globe, press:
 
 HUD shows the selected mode and collapses automatically. Mode switching during Fn hold cancels the temporary recording instead of transcribing it.
 
-## Следующий этап: 0.0.10 continuation
+## 0.0.10 status
 
-- Dock/app icon polish for packaged app
+Done:
+
+- local `.app` bundle script
+- ad-hoc signing
+- generated Dock/app `.icns`
+- Fn+1/2/3/4 quick mode switch
+- reset app settings button
+
+Still TODO:
+
+- manually verify `dist/VoiceDock.app`
 - first-run onboarding
 - permissions onboarding
-- reset settings
 - install/troubleshooting docs

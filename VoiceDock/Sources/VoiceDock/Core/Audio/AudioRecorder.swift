@@ -9,6 +9,7 @@ final class AudioRecorder: NSObject, ObservableObject {
     @Published private(set) var lastRecordingURL: URL?
     @Published private(set) var lastRecordingDurationMs: Int = 0
     @Published private(set) var lastRecordingSizeBytes: Int = 0
+    @Published private(set) var lastRecordingPeakLevel: Double = 0
     @Published private(set) var statusMessage: String = "No recording yet."
     @Published private(set) var waveformLevels: [Double] = Array(repeating: 0.08, count: 18)
 
@@ -16,6 +17,7 @@ final class AudioRecorder: NSObject, ObservableObject {
     private var player: AVAudioPlayer?
     private var recordingStartedAt: Date?
     private var meteringTask: Task<Void, Never>?
+    private var currentRecordingPeakLevel: Double = 0
 
     private override init() {
         super.init()
@@ -62,6 +64,8 @@ final class AudioRecorder: NSObject, ObservableObject {
             lastRecordingURL = url
             lastRecordingDurationMs = 0
             lastRecordingSizeBytes = 0
+            lastRecordingPeakLevel = 0
+            currentRecordingPeakLevel = 0
             state = .recording
             statusMessage = "Recording…"
             startMetering()
@@ -86,7 +90,8 @@ final class AudioRecorder: NSObject, ObservableObject {
 
         if let url = lastRecordingURL {
             lastRecordingSizeBytes = fileSize(url: url)
-            statusMessage = "Recorded \(durationMs) ms, \(lastRecordingSizeBytes) bytes."
+            lastRecordingPeakLevel = currentRecordingPeakLevel
+            statusMessage = "Recorded \(durationMs) ms, \(lastRecordingSizeBytes) bytes, peak \(String(format: "%.2f", lastRecordingPeakLevel))."
         } else {
             statusMessage = "Recording stopped, but file URL is missing."
         }
@@ -126,6 +131,8 @@ final class AudioRecorder: NSObject, ObservableObject {
         lastRecordingURL = nil
         lastRecordingDurationMs = 0
         lastRecordingSizeBytes = 0
+        lastRecordingPeakLevel = 0
+        currentRecordingPeakLevel = 0
         statusMessage = "Last recording deleted."
     }
 
@@ -155,6 +162,7 @@ final class AudioRecorder: NSObject, ObservableObject {
         let normalized = normalizedPower(power)
         let previous = waveformLevels.last ?? 0.08
         let smoothed = previous * 0.45 + normalized * 0.55
+        currentRecordingPeakLevel = max(currentRecordingPeakLevel, smoothed)
         waveformLevels.append(smoothed)
         if waveformLevels.count > 18 {
             waveformLevels.removeFirst(waveformLevels.count - 18)

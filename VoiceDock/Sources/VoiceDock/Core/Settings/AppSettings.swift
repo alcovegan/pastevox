@@ -9,9 +9,9 @@ enum TranscriptionMode: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .fileUploadAfterRelease: "File upload after release"
-        case .streamingCompletedRecording: "Streaming completed recording"
-        case .realtimeMicrophoneStreaming: "Realtime microphone streaming experimental"
+        case .fileUploadAfterRelease: "Best quality: file upload"
+        case .streamingCompletedRecording: "Experimental: completed-recording stream"
+        case .realtimeMicrophoneStreaming: "Experimental: realtime microphone"
         }
     }
 }
@@ -90,6 +90,14 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var soundFeedbackEnabled: Bool {
+        didSet { UserDefaults.standard.set(soundFeedbackEnabled, forKey: Keys.soundFeedbackEnabled) }
+    }
+
+    @Published var hapticFeedbackEnabled: Bool {
+        didSet { UserDefaults.standard.set(hapticFeedbackEnabled, forKey: Keys.hapticFeedbackEnabled) }
+    }
+
     private enum Keys {
         static let selectedHotkey = "selectedHotkey"
         static let promptMode = "promptMode"
@@ -103,6 +111,25 @@ final class AppSettings: ObservableObject {
         static let savedAPIKeyMask = "savedAPIKeyMask"
         static let showInDock = "showInDock"
         static let preferSpeedOverQuality = "preferSpeedOverQuality"
+        static let soundFeedbackEnabled = "soundFeedbackEnabled"
+        static let hapticFeedbackEnabled = "hapticFeedbackEnabled"
+    }
+
+    func resetToDefaults() {
+        selectedHotkey = "Fn/Globe hold"
+        promptMode = .rawDictation
+        sttModel = .gpt4oMiniTranscribe
+        transcriptionMode = .fileUploadAfterRelease
+        keepLastAudioForDebugging = false
+        pasteAutomatically = true
+        postProcessingEnabled = true
+        postProcessingModel = .gpt4oMini
+        postProcessingMaxOutputTokens = 1200
+        savedAPIKeyMask = "Not checked"
+        showInDock = false
+        preferSpeedOverQuality = false
+        soundFeedbackEnabled = true
+        hapticFeedbackEnabled = true
     }
 
     private init() {
@@ -123,5 +150,7 @@ final class AppSettings: ObservableObject {
         savedAPIKeyMask = UserDefaults.standard.string(forKey: Keys.savedAPIKeyMask) ?? "Not checked"
         showInDock = UserDefaults.standard.object(forKey: Keys.showInDock) as? Bool ?? false
         preferSpeedOverQuality = UserDefaults.standard.object(forKey: Keys.preferSpeedOverQuality) as? Bool ?? false
+        soundFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.soundFeedbackEnabled) as? Bool ?? true
+        hapticFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.hapticFeedbackEnabled) as? Bool ?? true
     }
 }

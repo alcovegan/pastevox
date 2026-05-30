@@ -5,7 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyActivationPolicy()
-        LocalLogger.shared.info("VoiceDock 0.0.8 started")
+        LocalLogger.shared.info("VoiceDock 0.0.10 started mode=\(AppSettings.shared.promptMode.rawValue) transcription_mode=\(AppSettings.shared.transcriptionMode.rawValue) stt_model=\(AppSettings.shared.sttModel.rawValue) paste_auto=\(AppSettings.shared.pasteAutomatically) postprocess=\(AppSettings.shared.postProcessingEnabled) mic=\(PermissionsManager.shared.microphonePermissionDescription().replacingOccurrences(of: " ", with: "_")) accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false))")
         FloatingHUDController.shared.configureIfNeeded()
         configureStatusItem()
         HotkeyManager.shared.start()

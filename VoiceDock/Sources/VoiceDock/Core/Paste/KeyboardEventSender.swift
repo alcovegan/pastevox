@@ -8,6 +8,7 @@ final class KeyboardEventSender {
 
     func sendCommandV() throws {
         guard PermissionsManager.shared.isAccessibilityTrusted(prompt: false) else {
+            _ = PermissionsManager.shared.isAccessibilityTrusted(prompt: true)
             throw PasteError.accessibilityPermissionMissing
         }
 

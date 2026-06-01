@@ -16,6 +16,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        Task { @MainActor in
+            HomeWindowController.shared.show()
+        }
+        return true
+    }
+
     @MainActor
     func applyActivationPolicy() {
         NSApp.setActivationPolicy(AppSettings.shared.showInDock ? .regular : .accessory)
@@ -68,6 +75,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ))
 
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(
+            title: "Open Home…",
+            action: #selector(openHome),
+            keyEquivalent: "h"
+        ))
         menu.addItem(NSMenuItem(
             title: "Open Settings…",
             action: #selector(openSettings),
@@ -126,6 +138,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func pasteLastResult() {
         Task { @MainActor in
             await HotkeyManager.shared.pasteLastResult()
+        }
+    }
+
+    @objc private func openHome() {
+        Task { @MainActor in
+            HomeWindowController.shared.show()
         }
     }
 

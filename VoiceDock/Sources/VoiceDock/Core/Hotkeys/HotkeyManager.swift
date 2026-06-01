@@ -166,6 +166,7 @@ final class HotkeyManager: ObservableObject {
             return
         }
         var metrics = DictationMetrics()
+        let pasteTarget = AppSettings.shared.logPasteTargetApp ? PasteTarget.current : nil
         metrics.promptMode = AppSettings.shared.promptMode
         effectiveTranscriptionMode = AppSettings.shared.transcriptionMode
         metrics.transcriptionMode = AppSettings.shared.transcriptionMode
@@ -187,6 +188,7 @@ final class HotkeyManager: ObservableObject {
                 statusMessage = "No active recording; ignored."
                 metrics.errorType = "no_recording_ignored"
                 MetricsStore.shared.add(metrics)
+                addHistory(transcript: "", output: "", status: .ignored, statusMessage: "No active recording", target: pasteTarget, metrics: metrics)
                 LocalLogger.shared.info("dictation ignored reason=no_recording")
                 return
             }
@@ -197,6 +199,7 @@ final class HotkeyManager: ObservableObject {
                 AudioRecorder.shared.deleteLastRecordingIfNeeded(keepForDebugging: AppSettings.shared.keepLastAudioForDebugging)
                 metrics.errorType = "recording_too_short_ignored"
                 MetricsStore.shared.add(metrics)
+                addHistory(transcript: "", output: "", status: .ignored, statusMessage: "Recording too short", target: pasteTarget, metrics: metrics)
                 LocalLogger.shared.info("dictation ignored reason=recording_too_short duration_ms=\(AudioRecorder.shared.lastRecordingDurationMs)")
                 return
             }
@@ -207,6 +210,7 @@ final class HotkeyManager: ObservableObject {
                 AudioRecorder.shared.deleteLastRecordingIfNeeded(keepForDebugging: AppSettings.shared.keepLastAudioForDebugging)
                 metrics.errorType = "no_voice_detected_ignored"
                 MetricsStore.shared.add(metrics)
+                addHistory(transcript: "", output: "", status: .ignored, statusMessage: "No voice detected", target: pasteTarget, metrics: metrics)
                 LocalLogger.shared.info("dictation ignored reason=no_voice_detected duration_ms=\(AudioRecorder.shared.lastRecordingDurationMs) peak=\(String(format: "%.3f", AudioRecorder.shared.lastRecordingPeakLevel)) threshold=\(silencePeakLevelThreshold)")
                 return
             }
@@ -223,7 +227,19 @@ final class HotkeyManager: ObservableObject {
             statusMessage = "Transcribed in \(result.durationMs) ms."
 
             let postprocessStartedAt = Date()
-            let output = try await finalOutput(from: result.text)
+            let output: PostProcessingResult
+            if let match = SnippetStore.shared.match(for: result.text) {
+                output = PostProcessingResult(
+                    text: match.outputText,
+                    durationMs: 0,
+                    model: "snippet",
+                    mode: AppSettings.shared.promptMode,
+                    isRiskyTerminalCommand: false
+                )
+                LocalLogger.shared.info("snippet_matched reason=\(match.reason) confidence=\(String(format: "%.2f", match.confidence)) matched_trigger_chars=\(match.matchedTrigger.count) replacement_chars=\(match.snippet.replacement.count)")
+            } else {
+                output = try await finalOutput(from: result.text)
+            }
             metrics.postprocessDurationMs = Int(Date().timeIntervalSince(postprocessStartedAt) * 1000)
             LocalLogger.shared.info("dictation final_output_success chars=\(output.text.count) postprocess_duration_ms=\(metrics.postprocessDurationMs ?? 0) mode=\(output.mode.rawValue) risky=\(output.isRiskyTerminalCommand)")
             let textToDeliver = output.isRiskyTerminalCommand ? SafetyClassifier.riskyPreview(command: output.text) : output.text
@@ -235,6 +251,7 @@ final class HotkeyManager: ObservableObject {
                 try ClipboardPasteService.shared.copyOnly(textToDeliver)
                 lastPasteStatus = "Risky terminal command copied for preview; not auto-pasted."
                 metrics.errorType = "risky_terminal_command"
+                addHistory(transcript: result.text, output: textToDeliver, status: .copied, statusMessage: "Risky command copied", target: pasteTarget, metrics: metrics)
                 FloatingHUDController.shared.show(.error)
             } else if AppSettings.shared.pasteAutomatically {
                 do {
@@ -243,6 +260,7 @@ final class HotkeyManager: ObservableObject {
                     metrics.pasteDurationMs = Int(Date().timeIntervalSince(pasteStartedAt) * 1000)
                     lastPasteStatus = "Pasted automatically; clipboard restored."
                     metrics.success = true
+                    addHistory(transcript: result.text, output: textToDeliver, status: .pasted, statusMessage: "Pasted automatically", target: pasteTarget, metrics: metrics)
                     FeedbackService.shared.success()
                     FloatingHUDController.shared.show(.pasted)
                 } catch {
@@ -250,6 +268,7 @@ final class HotkeyManager: ObservableObject {
                     metrics.errorType = String(describing: type(of: error))
                     metrics.success = true
                     LocalLogger.shared.error("dictation paste_failed copied_to_clipboard=true accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false)) error=\(error.localizedDescription)")
+                    addHistory(transcript: result.text, output: textToDeliver, status: .copied, statusMessage: "Auto-paste failed; copied", target: pasteTarget, metrics: metrics)
                     FeedbackService.shared.success()
                     FloatingHUDController.shared.show(.pasted, message: "Copied")
                 }
@@ -258,6 +277,7 @@ final class HotkeyManager: ObservableObject {
                 metrics.pasteDurationMs = 0
                 metrics.success = true
                 lastPasteStatus = "Copied to clipboard. Paste manually."
+                addHistory(transcript: result.text, output: textToDeliver, status: .copied, statusMessage: "Copied to clipboard", target: pasteTarget, metrics: metrics)
                 FeedbackService.shared.success()
                 FloatingHUDController.shared.show(.pasted)
             }
@@ -277,6 +297,7 @@ final class HotkeyManager: ObservableObject {
                 metrics.totalReleaseToPasteMs = Int(Date().timeIntervalSince(releasedAt) * 1000)
             }
             MetricsStore.shared.add(metrics)
+            addHistory(transcript: lastTranscript, output: lastProcessedText, status: .error, statusMessage: error.localizedDescription, target: pasteTarget, metrics: metrics)
             FloatingHUDController.shared.show(.error)
         }
     }
@@ -312,6 +333,27 @@ final class HotkeyManager: ObservableObject {
             lastPasteStatus = error.localizedDescription
             FloatingHUDController.shared.show(.error)
         }
+    }
+
+    private func addHistory(
+        transcript: String,
+        output: String,
+        status: DictationHistoryStatus,
+        statusMessage: String,
+        target: PasteTarget?,
+        metrics: DictationMetrics
+    ) {
+        DictationHistoryStore.shared.add(DictationHistoryEntry(
+            transcript: transcript,
+            output: output,
+            promptMode: metrics.promptMode ?? AppSettings.shared.promptMode,
+            transcriptionMode: metrics.transcriptionMode ?? effectiveTranscriptionMode,
+            model: metrics.model ?? AppSettings.shared.sttModel.rawValue,
+            status: status,
+            statusMessage: statusMessage,
+            target: target,
+            durationMs: metrics.totalReleaseToPasteMs
+        ))
     }
 
     private func transcribe(audioURL: URL, context: TranscriptionContext) async throws -> TranscriptionResult {

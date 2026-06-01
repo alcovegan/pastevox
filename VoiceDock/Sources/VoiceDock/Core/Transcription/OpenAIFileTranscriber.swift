@@ -52,6 +52,7 @@ final class OpenAIFileTranscriber: Transcriber {
         request.httpBody = makeMultipartBody(
             boundary: boundary,
             model: context.model,
+            prompt: DictionaryStore.promptText(),
             audioURL: audioURL,
             audioData: audioData
         )
@@ -71,10 +72,13 @@ final class OpenAIFileTranscriber: Transcriber {
         )
     }
 
-    private func makeMultipartBody(boundary: String, model: String, audioURL: URL, audioData: Data) -> Data {
+    private func makeMultipartBody(boundary: String, model: String, prompt: String?, audioURL: URL, audioData: Data) -> Data {
         var body = Data()
         body.appendFormField(name: "model", value: model, boundary: boundary)
         body.appendFormField(name: "response_format", value: "text", boundary: boundary)
+        if let prompt, !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            body.appendFormField(name: "prompt", value: prompt, boundary: boundary)
+        }
         body.appendFileField(
             name: "file",
             filename: audioURL.lastPathComponent,

@@ -176,6 +176,10 @@ struct SettingsView: View {
                 Toggle("Haptic feedback", isOn: $settings.hapticFeedbackEnabled)
                     .help("Subtle haptic only on release/success/error; no haptic on recording start.")
                 Toggle("Keep last audio for debugging", isOn: $settings.keepLastAudioForDebugging)
+                Toggle("Log paste target app", isOn: $settings.logPasteTargetApp)
+                    .help("Stores target app name/bundle in local history for debugging and repeat paste.")
+                Toggle("Log target window title", isOn: $settings.logPasteTargetWindowTitle)
+                    .help("Optional and off by default. Requires Accessibility and may expose document/window names in local history.")
             }
 
             SettingsCard("Post-processing") {

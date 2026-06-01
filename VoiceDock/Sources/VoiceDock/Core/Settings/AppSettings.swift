@@ -1,6 +1,6 @@
 import Foundation
 
-enum TranscriptionMode: String, CaseIterable, Identifiable {
+enum TranscriptionMode: String, CaseIterable, Identifiable, Codable {
     case fileUploadAfterRelease
     case streamingCompletedRecording
     case realtimeMicrophoneStreaming
@@ -98,6 +98,14 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(hapticFeedbackEnabled, forKey: Keys.hapticFeedbackEnabled) }
     }
 
+    @Published var logPasteTargetApp: Bool {
+        didSet { UserDefaults.standard.set(logPasteTargetApp, forKey: Keys.logPasteTargetApp) }
+    }
+
+    @Published var logPasteTargetWindowTitle: Bool {
+        didSet { UserDefaults.standard.set(logPasteTargetWindowTitle, forKey: Keys.logPasteTargetWindowTitle) }
+    }
+
     private enum Keys {
         static let selectedHotkey = "selectedHotkey"
         static let promptMode = "promptMode"
@@ -113,6 +121,8 @@ final class AppSettings: ObservableObject {
         static let preferSpeedOverQuality = "preferSpeedOverQuality"
         static let soundFeedbackEnabled = "soundFeedbackEnabled"
         static let hapticFeedbackEnabled = "hapticFeedbackEnabled"
+        static let logPasteTargetApp = "logPasteTargetApp"
+        static let logPasteTargetWindowTitle = "logPasteTargetWindowTitle"
     }
 
     func resetToDefaults() {
@@ -130,6 +140,8 @@ final class AppSettings: ObservableObject {
         preferSpeedOverQuality = false
         soundFeedbackEnabled = true
         hapticFeedbackEnabled = true
+        logPasteTargetApp = true
+        logPasteTargetWindowTitle = false
     }
 
     private init() {
@@ -152,5 +164,7 @@ final class AppSettings: ObservableObject {
         preferSpeedOverQuality = UserDefaults.standard.object(forKey: Keys.preferSpeedOverQuality) as? Bool ?? false
         soundFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.soundFeedbackEnabled) as? Bool ?? true
         hapticFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.hapticFeedbackEnabled) as? Bool ?? true
+        logPasteTargetApp = UserDefaults.standard.object(forKey: Keys.logPasteTargetApp) as? Bool ?? true
+        logPasteTargetWindowTitle = UserDefaults.standard.object(forKey: Keys.logPasteTargetWindowTitle) as? Bool ?? false
     }
 }

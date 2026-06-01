@@ -169,6 +169,8 @@ struct SettingsView: View {
                         NSApp.delegate.flatMap { $0 as? AppDelegate }?.applyActivationPolicy()
                     }
                 Toggle("Paste automatically", isOn: $settings.pasteAutomatically)
+                Toggle("App-aware mode switching", isOn: $settings.appAwareModeSwitchingEnabled)
+                    .help("Experimental: Cursor/VS Code/Xcode → Agent, Terminal/iTerm → Command, chats/mail → Raw.")
                 Toggle("Prefer speed over quality", isOn: $settings.preferSpeedOverQuality)
                     .help("Uses file upload + gpt-4o-mini-transcribe + disables post-processing.")
                 Toggle("Sound feedback", isOn: $settings.soundFeedbackEnabled)

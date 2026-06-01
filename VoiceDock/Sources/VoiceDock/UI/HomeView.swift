@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 private enum HomeSection: String, CaseIterable, Identifiable {
     case history = "History"
@@ -333,6 +334,11 @@ struct HomeView: View {
                         resetSnippetForm()
                     }
                     .buttonStyle(HomeButtonStyle(.secondary))
+                    Button("Import JSON") { importSnippetsJSON() }
+                        .buttonStyle(HomeButtonStyle(.secondary))
+                    Button("Export JSON") { exportSnippetsJSON() }
+                        .buttonStyle(HomeButtonStyle(.secondary))
+                        .disabled(snippetStore.snippets.isEmpty)
                     Button("Clear Snippets") { snippetStore.clear() }
                         .buttonStyle(HomeButtonStyle(.danger))
                         .disabled(snippetStore.snippets.isEmpty)
@@ -443,6 +449,38 @@ struct HomeView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func exportSnippetsJSON() {
+        let panel = NSSavePanel()
+        panel.title = "Export snippets"
+        panel.nameFieldStringValue = "voicedock-snippets.json"
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try JSONEncoder.prettyPrinted.encode(snippetStore.portableSnippets())
+            try data.write(to: url)
+            newSnippetStatus = "Exported."
+        } catch {
+            newSnippetStatus = "Export failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func importSnippetsJSON() {
+        let panel = NSOpenPanel()
+        panel.title = "Import snippets"
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let snippets = try JSONDecoder().decode([PortableSnippet].self, from: data)
+            let count = snippetStore.importPortableSnippets(snippets)
+            newSnippetStatus = "Imported \(count)."
+        } catch {
+            newSnippetStatus = "Import failed: \(error.localizedDescription)"
         }
     }
 

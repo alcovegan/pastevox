@@ -106,6 +106,10 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(logPasteTargetWindowTitle, forKey: Keys.logPasteTargetWindowTitle) }
     }
 
+    @Published var appAwareModeSwitchingEnabled: Bool {
+        didSet { UserDefaults.standard.set(appAwareModeSwitchingEnabled, forKey: Keys.appAwareModeSwitchingEnabled) }
+    }
+
     private enum Keys {
         static let selectedHotkey = "selectedHotkey"
         static let promptMode = "promptMode"
@@ -123,6 +127,7 @@ final class AppSettings: ObservableObject {
         static let hapticFeedbackEnabled = "hapticFeedbackEnabled"
         static let logPasteTargetApp = "logPasteTargetApp"
         static let logPasteTargetWindowTitle = "logPasteTargetWindowTitle"
+        static let appAwareModeSwitchingEnabled = "appAwareModeSwitchingEnabled"
     }
 
     func resetToDefaults() {
@@ -142,6 +147,7 @@ final class AppSettings: ObservableObject {
         hapticFeedbackEnabled = true
         logPasteTargetApp = true
         logPasteTargetWindowTitle = false
+        appAwareModeSwitchingEnabled = false
     }
 
     private init() {
@@ -166,5 +172,6 @@ final class AppSettings: ObservableObject {
         hapticFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.hapticFeedbackEnabled) as? Bool ?? true
         logPasteTargetApp = UserDefaults.standard.object(forKey: Keys.logPasteTargetApp) as? Bool ?? true
         logPasteTargetWindowTitle = UserDefaults.standard.object(forKey: Keys.logPasteTargetWindowTitle) as? Bool ?? false
+        appAwareModeSwitchingEnabled = UserDefaults.standard.object(forKey: Keys.appAwareModeSwitchingEnabled) as? Bool ?? false
     }
 }

@@ -27,6 +27,46 @@ struct VoiceSnippet: Identifiable, Codable, Equatable {
     }
 }
 
+struct PortableSnippet: Codable {
+    let triggers: [String]
+    let replacement: String
+
+    enum CodingKeys: String, CodingKey {
+        case triggers
+        case replacement
+        case trigger
+        case text
+        case name
+    }
+
+    init(triggers: [String], replacement: String) {
+        self.triggers = triggers
+        self.replacement = replacement
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(triggers, forKey: .triggers)
+        try container.encode(replacement, forKey: .replacement)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let triggers = try container.decodeIfPresent([String].self, forKey: .triggers) {
+            self.triggers = triggers
+        } else if let trigger = try container.decodeIfPresent(String.self, forKey: .trigger) {
+            self.triggers = [trigger]
+        } else if let name = try container.decodeIfPresent(String.self, forKey: .name) {
+            self.triggers = [name]
+        } else {
+            self.triggers = []
+        }
+        self.replacement = try container.decodeIfPresent(String.self, forKey: .replacement)
+            ?? container.decodeIfPresent(String.self, forKey: .text)
+            ?? ""
+    }
+}
+
 struct SnippetMatch {
     let snippet: VoiceSnippet
     let matchedTrigger: String
@@ -96,6 +136,23 @@ final class SnippetStore: ObservableObject {
     func clear() {
         snippets.removeAll()
         save()
+    }
+
+    func portableSnippets() -> [PortableSnippet] {
+        snippets.map { PortableSnippet(triggers: $0.allTriggers, replacement: $0.replacement) }
+    }
+
+    func importPortableSnippets(_ portableSnippets: [PortableSnippet]) -> Int {
+        var imported = 0
+        for snippet in portableSnippets {
+            let triggers = snippet.triggers.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            let replacement = snippet.replacement.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let primary = triggers.first, !replacement.isEmpty else { continue }
+            let before = snippets.count
+            add(trigger: primary, triggers: triggers, replacement: replacement)
+            if snippets.count > before { imported += 1 }
+        }
+        return imported
     }
 
     func match(for text: String) -> SnippetMatch? {

@@ -167,7 +167,12 @@ final class HotkeyManager: ObservableObject {
         }
         var metrics = DictationMetrics()
         let pasteTarget = AppSettings.shared.logPasteTargetApp ? PasteTarget.current : nil
-        metrics.promptMode = AppSettings.shared.promptMode
+        let effectivePromptMode = AppAwareModeResolver.mode(for: pasteTarget) ?? AppSettings.shared.promptMode
+        if let explanation = AppAwareModeResolver.explanation(for: pasteTarget, resolvedMode: effectivePromptMode), effectivePromptMode != AppSettings.shared.promptMode {
+            LocalLogger.shared.info("app_aware_mode_switch \(explanation)")
+            FloatingHUDController.shared.show(.modeChanged, message: effectivePromptMode.shortTitle)
+        }
+        metrics.promptMode = effectivePromptMode
         effectiveTranscriptionMode = AppSettings.shared.transcriptionMode
         metrics.transcriptionMode = AppSettings.shared.transcriptionMode
         metrics.model = AppSettings.shared.sttModel.rawValue
@@ -217,7 +222,7 @@ final class HotkeyManager: ObservableObject {
 
             statusMessage = "Transcribing hotkey recording…"
             let transcriptionStartedAt = Date()
-            let context = TranscriptionContext(promptMode: AppSettings.shared.promptMode, model: AppSettings.shared.sttModel.rawValue)
+            let context = TranscriptionContext(promptMode: effectivePromptMode, model: AppSettings.shared.sttModel.rawValue)
             let result = try await transcribe(audioURL: url, context: context)
             metrics.transcriptionDurationMs = Int(Date().timeIntervalSince(transcriptionStartedAt) * 1000)
             LocalLogger.shared.info("dictation transcription_success chars=\(result.text.count) duration_ms=\(result.durationMs) effective_mode=\(effectiveTranscriptionMode.rawValue)")
@@ -233,12 +238,12 @@ final class HotkeyManager: ObservableObject {
                     text: match.outputText,
                     durationMs: 0,
                     model: "snippet",
-                    mode: AppSettings.shared.promptMode,
+                    mode: effectivePromptMode,
                     isRiskyTerminalCommand: false
                 )
                 LocalLogger.shared.info("snippet_matched reason=\(match.reason) confidence=\(String(format: "%.2f", match.confidence)) matched_trigger_chars=\(match.matchedTrigger.count) replacement_chars=\(match.snippet.replacement.count)")
             } else {
-                output = try await finalOutput(from: result.text)
+                output = try await finalOutput(from: result.text, promptMode: effectivePromptMode)
             }
             metrics.postprocessDurationMs = Int(Date().timeIntervalSince(postprocessStartedAt) * 1000)
             LocalLogger.shared.info("dictation final_output_success chars=\(output.text.count) postprocess_duration_ms=\(metrics.postprocessDurationMs ?? 0) mode=\(output.mode.rawValue) risky=\(output.isRiskyTerminalCommand)")
@@ -387,22 +392,22 @@ final class HotkeyManager: ObservableObject {
         }
     }
 
-    private func finalOutput(from transcript: String) async throws -> PostProcessingResult {
+    private func finalOutput(from transcript: String, promptMode: PromptMode) async throws -> PostProcessingResult {
         let settings = AppSettings.shared
-        guard settings.postProcessingEnabled, settings.promptMode != .rawDictation else {
+        guard settings.postProcessingEnabled, promptMode != .rawDictation else {
             return PostProcessingResult(
                 text: transcript,
                 durationMs: 0,
                 model: "none",
-                mode: .rawDictation,
-                isRiskyTerminalCommand: settings.promptMode == .terminalCommand && SafetyClassifier.isRiskyTerminalCommandOutput(transcript)
+                mode: promptMode,
+                isRiskyTerminalCommand: promptMode == .terminalCommand && SafetyClassifier.isRiskyTerminalCommandOutput(transcript)
             )
         }
 
-        statusMessage = "Post-processing \(settings.promptMode.title)…"
+        statusMessage = "Post-processing \(promptMode.title)…"
         let processed = try await postProcessor.process(
             text: transcript,
-            mode: settings.promptMode,
+            mode: promptMode,
             model: settings.postProcessingModel.rawValue,
             maxOutputTokens: settings.postProcessingMaxOutputTokens
         )

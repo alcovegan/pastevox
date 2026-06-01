@@ -102,6 +102,17 @@ The script creates an ad-hoc signed local app bundle with generated `AppIcon.icn
 VoiceDock/dist/VoiceDock.app
 ```
 
+### Install to Applications
+
+```bash
+cd VoiceDock
+./scripts/build-app.sh
+./scripts/install-app.sh
+open /Applications/VoiceDock.app
+```
+
+Installing to `/Applications/VoiceDock.app` gives macOS Accessibility permissions a more stable app path than `dist/VoiceDock.app`.
+
 ### Fn + number quick mode switch
 
 While holding Fn/Globe, press:
@@ -122,10 +133,13 @@ Done:
 - generated Dock/app `.icns`
 - Fn+1/2/3/4 quick mode switch
 - reset app settings button
+- separate Home window with History, Dictionary, Snippets and Scratchpad
+- snippet search, JSON import/export and record-test preview
+- optional app-aware mode switching
+- install script for `/Applications/VoiceDock.app`
 
 Still TODO:
 
-- manually verify `dist/VoiceDock.app`
 - first-run onboarding
 - permissions onboarding
-- install/troubleshooting docs
+- troubleshooting docs

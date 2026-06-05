@@ -181,7 +181,7 @@ final class AudioRecorder: NSObject, ObservableObject {
 
     private func makeTempRecordingURL() -> URL {
         FileManager.default.temporaryDirectory
-            .appendingPathComponent("voicedock-recording-\(UUID().uuidString)")
+            .appendingPathComponent("pastevox-recording-\(UUID().uuidString)")
             .appendingPathExtension("m4a")
     }
 

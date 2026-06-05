@@ -23,6 +23,61 @@ enum PostProcessingModel: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum WritingStyle: String, CaseIterable, Identifiable, Codable {
+    case `default`
+    case concise
+    case friendly
+    case formal
+    case codingAgent
+    case chat
+    case email
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .default: "Default"
+        case .concise: "Concise"
+        case .friendly: "Friendly"
+        case .formal: "Formal"
+        case .codingAgent: "Coding Agent"
+        case .chat: "Chat"
+        case .email: "Email"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .default: "Default"
+        case .concise: "Concise"
+        case .friendly: "Friendly"
+        case .formal: "Formal"
+        case .codingAgent: "Coding"
+        case .chat: "Chat"
+        case .email: "Email"
+        }
+    }
+
+    var instruction: String {
+        switch self {
+        case .default:
+            "Сохраняй естественный стиль пользователя."
+        case .concise:
+            "Сделай результат кратким, плотным и без лишних слов."
+        case .friendly:
+            "Сделай тон дружелюбным, живым и понятным, без чрезмерной официальности."
+        case .formal:
+            "Сделай тон профессиональным, аккуратным и формальным."
+        case .codingAgent:
+            "Сформулируй как чёткую задачу для coding agent: цель, контекст, ограничения, критерии готовности."
+        case .chat:
+            "Сформулируй как короткое сообщение для чата/мессенджера."
+        case .email:
+            "Сформулируй как аккуратный email или email-фрагмент с уместным тоном."
+        }
+    }
+}
+
 enum STTModel: String, CaseIterable, Identifiable {
     case gpt4oMiniTranscribe = "gpt-4o-mini-transcribe"
     case gpt4oTranscribe = "gpt-4o-transcribe"
@@ -43,6 +98,10 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(promptMode.rawValue, forKey: Keys.promptMode) }
     }
 
+    @Published var writingStyle: WritingStyle {
+        didSet { UserDefaults.standard.set(writingStyle.rawValue, forKey: Keys.writingStyle) }
+    }
+
     @Published var sttModel: STTModel {
         didSet { UserDefaults.standard.set(sttModel.rawValue, forKey: Keys.sttModel) }
     }
@@ -61,6 +120,10 @@ final class AppSettings: ObservableObject {
 
     @Published var postProcessingEnabled: Bool {
         didSet { UserDefaults.standard.set(postProcessingEnabled, forKey: Keys.postProcessingEnabled) }
+    }
+
+    @Published var postProcessingEnabledModes: Set<PromptMode> {
+        didSet { UserDefaults.standard.set(postProcessingEnabledModes.map(\.rawValue), forKey: Keys.postProcessingEnabledModes) }
     }
 
     @Published var postProcessingModel: PostProcessingModel {
@@ -85,7 +148,6 @@ final class AppSettings: ObservableObject {
             if preferSpeedOverQuality {
                 transcriptionMode = .fileUploadAfterRelease
                 sttModel = .gpt4oMiniTranscribe
-                postProcessingEnabled = false
             }
         }
     }
@@ -113,11 +175,13 @@ final class AppSettings: ObservableObject {
     private enum Keys {
         static let selectedHotkey = "selectedHotkey"
         static let promptMode = "promptMode"
+        static let writingStyle = "writingStyle"
         static let sttModel = "sttModel"
         static let transcriptionMode = "transcriptionMode"
         static let keepLastAudioForDebugging = "keepLastAudioForDebugging"
         static let pasteAutomatically = "pasteAutomatically"
         static let postProcessingEnabled = "postProcessingEnabled"
+        static let postProcessingEnabledModes = "postProcessingEnabledModes"
         static let postProcessingModel = "postProcessingModel"
         static let postProcessingMaxOutputTokens = "postProcessingMaxOutputTokens"
         static let savedAPIKeyMask = "savedAPIKeyMask"
@@ -133,11 +197,13 @@ final class AppSettings: ObservableObject {
     func resetToDefaults() {
         selectedHotkey = "Fn/Globe hold"
         promptMode = .rawDictation
+        writingStyle = .default
         sttModel = .gpt4oMiniTranscribe
         transcriptionMode = .fileUploadAfterRelease
         keepLastAudioForDebugging = false
         pasteAutomatically = true
         postProcessingEnabled = true
+        postProcessingEnabledModes = [.agentPrompt, .ralphPrompt, .terminalCommand]
         postProcessingModel = .gpt4oMini
         postProcessingMaxOutputTokens = 1200
         savedAPIKeyMask = "Not checked"
@@ -154,6 +220,8 @@ final class AppSettings: ObservableObject {
         selectedHotkey = UserDefaults.standard.string(forKey: Keys.selectedHotkey) ?? "Fn/Globe hold"
         let promptModeRaw = UserDefaults.standard.string(forKey: Keys.promptMode) ?? PromptMode.rawDictation.rawValue
         promptMode = PromptMode(rawValue: promptModeRaw) ?? .rawDictation
+        let styleRaw = UserDefaults.standard.string(forKey: Keys.writingStyle) ?? WritingStyle.default.rawValue
+        writingStyle = WritingStyle(rawValue: styleRaw) ?? .default
         let modelRaw = UserDefaults.standard.string(forKey: Keys.sttModel) ?? STTModel.gpt4oMiniTranscribe.rawValue
         sttModel = STTModel(rawValue: modelRaw) ?? .gpt4oMiniTranscribe
         let transcriptionModeRaw = UserDefaults.standard.string(forKey: Keys.transcriptionMode) ?? TranscriptionMode.fileUploadAfterRelease.rawValue
@@ -161,6 +229,11 @@ final class AppSettings: ObservableObject {
         keepLastAudioForDebugging = UserDefaults.standard.bool(forKey: Keys.keepLastAudioForDebugging)
         pasteAutomatically = UserDefaults.standard.object(forKey: Keys.pasteAutomatically) as? Bool ?? true
         postProcessingEnabled = UserDefaults.standard.object(forKey: Keys.postProcessingEnabled) as? Bool ?? true
+        if let enabledModeRawValues = UserDefaults.standard.stringArray(forKey: Keys.postProcessingEnabledModes) {
+            postProcessingEnabledModes = Set(enabledModeRawValues.compactMap(PromptMode.init(rawValue:)))
+        } else {
+            postProcessingEnabledModes = [.agentPrompt, .ralphPrompt, .terminalCommand]
+        }
         let postModelRaw = UserDefaults.standard.string(forKey: Keys.postProcessingModel) ?? PostProcessingModel.gpt4oMini.rawValue
         postProcessingModel = PostProcessingModel(rawValue: postModelRaw) ?? .gpt4oMini
         let savedMaxTokens = UserDefaults.standard.integer(forKey: Keys.postProcessingMaxOutputTokens)

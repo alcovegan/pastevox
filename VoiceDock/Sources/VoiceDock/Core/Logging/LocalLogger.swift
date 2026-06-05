@@ -5,13 +5,13 @@ final class LocalLogger {
 
     private let isoFormatter = ISO8601DateFormatter()
     private let logFileURL: URL
-    private let queue = DispatchQueue(label: "com.voicedock.local-logger")
+    private let queue = DispatchQueue(label: "com.pastevox.local-logger")
 
     private init() {
         let logsDirectory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/VoiceDock", isDirectory: true)
+            .appendingPathComponent("Library/Logs/PasteVox", isDirectory: true)
         try? FileManager.default.createDirectory(at: logsDirectory, withIntermediateDirectories: true)
-        logFileURL = logsDirectory.appendingPathComponent("voicedock.log")
+        logFileURL = logsDirectory.appendingPathComponent("pastevox.log")
     }
 
     func info(_ message: String) {

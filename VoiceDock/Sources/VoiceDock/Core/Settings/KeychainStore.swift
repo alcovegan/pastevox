@@ -4,7 +4,7 @@ import Security
 final class KeychainStore {
     static let shared = KeychainStore()
 
-    private let service = "com.voicedock.app"
+    private let service = "com.pastevox.app"
     private let openAIAPIKeyAccount = "openai-api-key"
 
     private init() {}

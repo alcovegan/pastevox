@@ -19,6 +19,8 @@ final class HotkeyManager: ObservableObject {
     private var lastDeliverableWasRisky = false
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var keyEventTap: CFMachPort?
+    private var keyEventTapRunLoopSource: CFRunLoopSource?
     private var maxRecordingTask: Task<Void, Never>?
     private let transcriber = OpenAIFileTranscriber()
     private let realtimeTranscriber = OpenAIRealtimeTranscriber()
@@ -31,6 +33,8 @@ final class HotkeyManager: ObservableObject {
     private var hotkeyReleasedAt: Date?
     private var recordingStartedAt: Date?
     private var effectiveTranscriptionMode: TranscriptionMode = .fileUploadAfterRelease
+    private var currentPasteTarget: PasteTarget?
+    private var currentEffectivePromptMode: PromptMode?
     private var modeSwitchDuringHold = false
 
     private init() {}
@@ -39,6 +43,15 @@ final class HotkeyManager: ObservableObject {
         guard !isRunning else { return }
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] event in
+            if event.type == .keyDown,
+               Task.isCancelled == false,
+               let self,
+               MainActor.assumeIsolated({ self.shouldConsumeModeSwitchKey(event) })
+            {
+                Task { @MainActor in self.handleKeyDown(event) }
+                return nil
+            }
+
             Task { @MainActor in
                 if event.type == .flagsChanged {
                     self?.handleFlagsChanged(event)
@@ -59,32 +72,121 @@ final class HotkeyManager: ObservableObject {
             }
         }
 
+        installKeyEventTap()
+
         isRunning = true
         statusMessage = "Hotkey monitor running: hold Fn/Globe to record."
         LocalLogger.shared.info("Hotkey monitor started kind=fnHold")
     }
 
+    func resetTransientModeState() {
+        currentPasteTarget = nil
+        currentEffectivePromptMode = nil
+        modeSwitchDuringHold = false
+        LocalLogger.shared.info("hotkey transient mode state reset")
+    }
+
+    func restart() {
+        stop()
+        start()
+        LocalLogger.shared.info("hotkey monitor restarted")
+    }
+
     func stop() {
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        if let keyEventTapRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), keyEventTapRunLoopSource, .commonModes)
+        }
+        if let keyEventTap {
+            CGEvent.tapEnable(tap: keyEventTap, enable: false)
+        }
         globalMonitor = nil
         localMonitor = nil
+        keyEventTap = nil
+        keyEventTapRunLoopSource = nil
         maxRecordingTask?.cancel()
         maxRecordingTask = nil
         isRunning = false
         isPressed = false
+        currentPasteTarget = nil
+        currentEffectivePromptMode = nil
+        modeSwitchDuringHold = false
         statusMessage = "Hotkey monitor stopped."
         LocalLogger.shared.info("Hotkey monitor stopped")
     }
 
-    private func handleKeyDown(_ event: NSEvent) {
-        guard isPressed || event.modifierFlags.contains(.function) else { return }
-        guard let mode = promptMode(for: event.charactersIgnoringModifiers ?? "") else { return }
+    private func installKeyEventTap() {
+        guard keyEventTap == nil else { return }
+        let eventMask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        let userInfo = Unmanaged.passUnretained(self).toOpaque()
 
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: eventMask,
+            callback: HotkeyManager.keyEventTapCallback,
+            userInfo: userInfo
+        ) else {
+            LocalLogger.shared.error("key_event_tap install_failed accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false))")
+            return
+        }
+
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        keyEventTap = tap
+        keyEventTapRunLoopSource = source
+        LocalLogger.shared.info("key_event_tap installed purpose=consume_fn_number_mode_switch")
+    }
+
+    nonisolated private static let keyEventTapCallback: CGEventTapCallBack = { _, type, event, userInfo in
+        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
+        let flags = event.flags
+        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        guard flags.contains(.maskSecondaryFn), [18, 19, 20, 21, 23, 22, 26, 28, 25, 29].contains(keyCode), let userInfo else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        let manager = Unmanaged<HotkeyManager>.fromOpaque(userInfo).takeUnretainedValue()
+        Task { @MainActor in
+            manager.handleModeSwitchKeyCode(keyCode)
+        }
+        return nil
+    }
+
+    private func shouldConsumeModeSwitchKey(_ event: NSEvent) -> Bool {
+        guard isPressed || event.modifierFlags.contains(.function) else { return false }
+        let key = event.charactersIgnoringModifiers ?? ""
+        return promptMode(for: key) != nil || writingStyle(for: key) != nil
+    }
+
+    private func handleKeyDown(_ event: NSEvent) {
+        guard shouldConsumeModeSwitchKey(event) else { return }
+        let key = event.charactersIgnoringModifiers ?? ""
+        if let mode = promptMode(for: key) {
+            switchPromptMode(mode)
+        } else if let style = writingStyle(for: key) {
+            switchWritingStyle(style)
+        }
+    }
+
+    private func handleModeSwitchKeyCode(_ keyCode: CGKeyCode) {
+        if let mode = promptMode(forKeyCode: keyCode) {
+            switchPromptMode(mode)
+        } else if let style = writingStyle(forKeyCode: keyCode) {
+            switchWritingStyle(style)
+        }
+    }
+
+    private func switchPromptMode(_ mode: PromptMode) {
         modeSwitchDuringHold = true
+        currentPasteTarget = nil
+        currentEffectivePromptMode = mode
         AppSettings.shared.promptMode = mode
         statusMessage = "Prompt mode switched to \(mode.title)."
-        FloatingHUDController.shared.show(.modeChanged, message: "Mode: \(mode.shortTitle)")
+        FloatingHUDController.shared.show(.modeChanged, message: "Mode: \(hudModeStyleLabel(for: mode))")
 
         if AudioRecorder.shared.state == .recording {
             _ = try? AudioRecorder.shared.stopRecording()
@@ -102,6 +204,73 @@ final class HotkeyManager: ObservableObject {
         case "4": .terminalCommand
         default: nil
         }
+    }
+
+    private func promptMode(forKeyCode keyCode: CGKeyCode) -> PromptMode? {
+        switch keyCode {
+        case 18: .rawDictation      // ANSI 1
+        case 19: .agentPrompt      // ANSI 2
+        case 20: .ralphPrompt      // ANSI 3
+        case 21: .terminalCommand  // ANSI 4
+        default: nil
+        }
+    }
+
+    private func writingStyle(for key: String) -> WritingStyle? {
+        switch key {
+        case "5": .default
+        case "6": .concise
+        case "7": .friendly
+        case "8": .formal
+        case "9": .codingAgent
+        case "0": .chat
+        default: nil
+        }
+    }
+
+    private func writingStyle(forKeyCode keyCode: CGKeyCode) -> WritingStyle? {
+        switch keyCode {
+        case 23: .default      // ANSI 5
+        case 22: .concise      // ANSI 6
+        case 26: .friendly     // ANSI 7
+        case 28: .formal       // ANSI 8
+        case 25: .codingAgent  // ANSI 9
+        case 29: .chat         // ANSI 0
+        default: nil
+        }
+    }
+
+    private func switchWritingStyle(_ style: WritingStyle) {
+        modeSwitchDuringHold = true
+        AppSettings.shared.writingStyle = style
+        statusMessage = "Writing style switched to \(style.title)."
+        let mode = AppSettings.shared.promptMode
+        let suffix = styleApplies(to: mode) ? "" : " inactive"
+        FloatingHUDController.shared.show(.modeChanged, message: "Style: \(style.shortTitle)\(suffix)")
+
+        if AudioRecorder.shared.state == .recording {
+            _ = try? AudioRecorder.shared.stopRecording()
+            AudioRecorder.shared.deleteLastRecordingIfNeeded(keepForDebugging: false)
+        }
+
+        LocalLogger.shared.info("writing_style_switched source=fn_number style=\(style.rawValue)")
+    }
+
+    private func styleApplies(to mode: PromptMode) -> Bool {
+        let settings = AppSettings.shared
+        return settings.postProcessingEnabled
+            && settings.postProcessingEnabledModes.contains(mode)
+            && mode != .rawDictation
+            && settings.writingStyle != .default
+    }
+
+    private func hudModeStyleLabel(for mode: PromptMode) -> String {
+        let style = AppSettings.shared.writingStyle
+        guard style != .default else { return mode.shortTitle }
+        if styleApplies(to: mode) {
+            return "\(mode.shortTitle) · \(style.shortTitle)"
+        }
+        return "\(mode.shortTitle) · style off"
     }
 
     private func handleFlagsChanged(_ event: NSEvent) {
@@ -125,11 +294,17 @@ final class HotkeyManager: ObservableObject {
         statusMessage = "Fn pressed: starting recording…"
 
         do {
+            currentPasteTarget = PasteTarget.current
+            currentEffectivePromptMode = AppAwareModeResolver.mode(for: currentPasteTarget) ?? AppSettings.shared.promptMode
+            if let explanation = AppAwareModeResolver.explanation(for: currentPasteTarget, resolvedMode: currentEffectivePromptMode), currentEffectivePromptMode != AppSettings.shared.promptMode {
+                LocalLogger.shared.info("app_aware_mode_switch \(explanation)")
+            }
+
             LocalLogger.shared.info("recording_start requested mic_status=\(PermissionsManager.shared.microphonePermissionDescription().replacingOccurrences(of: " ", with: "_"))")
             try await AudioRecorder.shared.startRecording()
             recordingStartedAt = Date()
             FeedbackService.shared.recordingStarted()
-            FloatingHUDController.shared.show(.listening)
+            FloatingHUDController.shared.show(.listening, message: hudModeStyleLabel(for: currentEffectivePromptMode ?? AppSettings.shared.promptMode))
             statusMessage = "Recording while Fn is held…"
             scheduleMaximumRecordingTimeout()
 
@@ -163,14 +338,17 @@ final class HotkeyManager: ObservableObject {
         if modeSwitchDuringHold {
             modeSwitchDuringHold = false
             isPressed = false
+            currentPasteTarget = nil
+            currentEffectivePromptMode = nil
             return
         }
         var metrics = DictationMetrics()
-        let pasteTarget = AppSettings.shared.logPasteTargetApp ? PasteTarget.current : nil
-        let effectivePromptMode = AppAwareModeResolver.mode(for: pasteTarget) ?? AppSettings.shared.promptMode
-        if let explanation = AppAwareModeResolver.explanation(for: pasteTarget, resolvedMode: effectivePromptMode), effectivePromptMode != AppSettings.shared.promptMode {
-            LocalLogger.shared.info("app_aware_mode_switch \(explanation)")
-            FloatingHUDController.shared.show(.modeChanged, message: effectivePromptMode.shortTitle)
+        let targetAtPress = currentPasteTarget ?? PasteTarget.current
+        let pasteTarget = AppSettings.shared.logPasteTargetApp ? targetAtPress : nil
+        let effectivePromptMode = currentEffectivePromptMode ?? AppAwareModeResolver.mode(for: targetAtPress) ?? AppSettings.shared.promptMode
+        defer {
+            currentPasteTarget = nil
+            currentEffectivePromptMode = nil
         }
         metrics.promptMode = effectivePromptMode
         effectiveTranscriptionMode = AppSettings.shared.transcriptionMode
@@ -394,7 +572,7 @@ final class HotkeyManager: ObservableObject {
 
     private func finalOutput(from transcript: String, promptMode: PromptMode) async throws -> PostProcessingResult {
         let settings = AppSettings.shared
-        guard settings.postProcessingEnabled, promptMode != .rawDictation else {
+        guard settings.postProcessingEnabled, settings.postProcessingEnabledModes.contains(promptMode), promptMode != .rawDictation else {
             return PostProcessingResult(
                 text: transcript,
                 durationMs: 0,
@@ -408,6 +586,7 @@ final class HotkeyManager: ObservableObject {
         let processed = try await postProcessor.process(
             text: transcript,
             mode: promptMode,
+            style: settings.writingStyle,
             model: settings.postProcessingModel.rawValue,
             maxOutputTokens: settings.postProcessingMaxOutputTokens
         )

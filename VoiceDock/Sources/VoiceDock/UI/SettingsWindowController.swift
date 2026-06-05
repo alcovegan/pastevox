@@ -20,7 +20,7 @@ final class SettingsWindowController {
         let view = SettingsView(settings: settings, hudController: hudController)
         let hostingController = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "VoiceDock Settings"
+        window.title = "PasteVox Settings"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
         window.setFrame(defaultFrame(), display: false)

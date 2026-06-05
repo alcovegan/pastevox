@@ -80,6 +80,11 @@ final class DictationHistoryStore: ObservableObject {
         entries.reduce(0) { $0 + $1.wordCount }
     }
 
+    var pastedCount: Int { entries.filter { $0.status == .pasted }.count }
+    var copiedCount: Int { entries.filter { $0.status == .copied }.count }
+    var ignoredCount: Int { entries.filter { $0.status == .ignored }.count }
+    var errorCount: Int { entries.filter { $0.status == .error }.count }
+
     var averageWordsPerMinute: Int? {
         let values = entries.compactMap { entry -> Int? in
             guard let durationMs = entry.durationMs, durationMs > 0, entry.wordCount > 0 else { return nil }
@@ -105,6 +110,18 @@ final class DictationHistoryStore: ObservableObject {
     func clear() {
         entries.removeAll()
         save()
+    }
+
+    func topApps(limit: Int = 5) -> [(name: String, count: Int)] {
+        let names = entries.compactMap { $0.target?.appName }
+        let counts = Dictionary(grouping: names, by: { $0 }).mapValues { $0.count }
+        let pairs: [(name: String, count: Int)] = counts.map { key, value in
+            (name: key, count: value)
+        }
+        let sorted = pairs.sorted { lhs, rhs in
+            lhs.count == rhs.count ? lhs.name < rhs.name : lhs.count > rhs.count
+        }
+        return Array(sorted.prefix(limit))
     }
 
     func copy(_ entry: DictationHistoryEntry) {

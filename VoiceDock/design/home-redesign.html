@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PasteVox Design System Sketch — Neutral</title>
+  <style>
+    :root {
+      --bg: #f5f5f4;
+      --surface: #ffffff;
+      --surface-2: #f2f2f1;
+      --ink: #101010;
+      --muted: #666666;
+      --faint: #a5a5a5;
+      --line: rgba(0, 0, 0, .10);
+      --line-strong: rgba(0, 0, 0, .18);
+      --sand: #e8e8e6;
+      --sand-pressed: #dbdbd8;
+      --terracotta: #2f2f2f;
+      --terracotta-bg: #eeeeec;
+      --sage: #e8e8e5;
+      --sage-ink: #333333;
+      --blue-ink: #222222;
+      --blue-bg: #eeeeee;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .07), 0 2px 8px rgba(0, 0, 0, .04);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 9px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+      --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
+    }
+
+    .theme-mono {
+      --bg: #f5f5f4;
+      --surface: #ffffff;
+      --surface-2: #f1f1f0;
+      --ink: #101010;
+      --muted: #666666;
+      --faint: #a5a5a5;
+      --line: rgba(0, 0, 0, .10);
+      --line-strong: rgba(0, 0, 0, .18);
+      --sand: #e9e9e7;
+      --sand-pressed: #ddddda;
+      --terracotta: #2f2f2f;
+      --terracotta-bg: #eeeeec;
+      --sage: #e8e8e5;
+      --sage-ink: #333333;
+      --blue-ink: #222222;
+      --blue-bg: #eeeeee;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .07), 0 2px 8px rgba(0, 0, 0, .04);
+    }
+
+    .variant-title {
+      width: 1180px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .variant-title h2 {
+      margin: 0;
+      font: 680 26px/1.05 var(--display);
+      letter-spacing: -.035em;
+    }
+    .variant-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page { padding: 34px; }
+    .design-nav {
+      position: sticky;
+      top: 12px;
+      z-index: 20;
+      width: fit-content;
+      max-width: calc(100vw - 48px);
+      margin: 0 auto 18px;
+      display: flex;
+      gap: 6px;
+      padding: 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .90);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 28px rgba(27, 26, 25, .08);
+    }
+    .design-nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 750;
+      padding: 7px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .design-nav a:hover {
+      color: var(--ink);
+      background: rgba(27, 26, 25, .07);
+    }
+    .design-nav .divider {
+      width: 1px;
+      margin: 4px 3px;
+      background: var(--line);
+    }
+    .design-nav a.theme-link {
+      color: var(--ink);
+      background: rgba(27, 26, 25, .06);
+    }
+    .design-nav a.theme-link.active {
+      color: white;
+      background: var(--ink);
+    }
+
+    .app-shell {
+      width: 1180px;
+      height: 780px;
+      margin: 0 auto 32px;
+      display: grid;
+      grid-template-columns: 232px 1fr;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar {
+      padding: 24px 18px;
+      background: rgba(242, 242, 241, .95);
+      border-right: 1px solid rgba(35, 31, 27, .06);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 6px 12px;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #1c1b1a, #5b5148);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: -.04em;
+    }
+    .brand-title { font: 700 16px/1 var(--display); letter-spacing: -.02em; }
+    .brand-subtitle { margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+    .nav { display: grid; gap: 6px; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 11px;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .nav-item.active {
+      background: rgba(27, 26, 25, .075);
+      color: var(--ink);
+    }
+    .nav-icon {
+      width: 19px;
+      text-align: center;
+      color: currentColor;
+      opacity: .85;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 10px;
+      padding: 0 6px;
+    }
+
+    .content {
+      padding: 34px 42px 48px;
+      overflow: auto;
+      background: linear-gradient(180deg, #ffffff 0%, #f6f6f5 100%);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 24px;
+      margin-bottom: 26px;
+    }
+    h1 {
+      margin: 0;
+      font: 650 40px/1.05 var(--display);
+      letter-spacing: -.035em;
+    }
+    .subtitle {
+      margin-top: 8px;
+      font-size: 15px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 7px 24px rgba(27, 26, 25, .035);
+    }
+    .card.soft { background: #f3f3f2; }
+    .card-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .075em;
+      text-transform: uppercase;
+      margin-bottom: 13px;
+    }
+    .stat {
+      font: 650 38px/1 var(--display);
+      letter-spacing: -.035em;
+    }
+    .stat-caption {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .section-stack { display: grid; gap: 16px; }
+
+    .dashboard-row {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 14px;
+    }
+    .delivery-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mini-stat-card {
+      min-height: 74px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #ffffff;
+      border: 1px solid rgba(35,31,27,.075);
+    }
+    .mini-stat-value {
+      font: 720 24px/1 var(--display);
+      letter-spacing: -.03em;
+    }
+    .mini-stat-label {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .app-bars { display: grid; gap: 10px; }
+    .app-bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 24px;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .app-bar-name {
+      color: var(--ink);
+      font-weight: 700;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .app-bar-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(27,26,25,.075);
+      overflow: hidden;
+    }
+    .app-bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #24201d, #8f7c68);
+    }
+    .mini-title { font-size: 13px; font-weight: 750; margin-bottom: 9px; }
+    .metric-row, .app-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 5px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .app-row strong { color: var(--ink); font-weight: 650; }
+
+    .day-label {
+      margin: 18px 0 8px 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .09em;
+    }
+    .history-group {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #ffffff;
+    }
+    .history-row {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      gap: 14px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .history-row:last-child { border-bottom: 0; }
+    .time {
+      color: var(--muted);
+      font: 600 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      padding-top: 2px;
+    }
+    .history-text {
+      font-size: 14px;
+      line-height: 1.35;
+      letter-spacing: -.01em;
+      margin-bottom: 8px;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: rgba(27, 26, 25, .075);
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .status {
+      align-self: start;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--sage-ink);
+      background: var(--sage);
+    }
+
+    .actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .button {
+      appearance: none;
+      height: 34px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      padding: 0 13px;
+      font: 700 12.5px/1 var(--font);
+      letter-spacing: -.01em;
+      cursor: default;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .button.primary { color: white; background: var(--ink); }
+    .button.secondary { color: var(--ink); background: var(--sand); border-color: rgba(27,26,25,.08); }
+    .button.ghost { color: var(--muted); background: transparent; border-color: rgba(27,26,25,.10); }
+    .button.danger { color: var(--terracotta); background: var(--terracotta-bg); border-color: rgba(0,0,0,.14); }
+    .button.small { height: 28px; padding: 0 9px; font-size: 11.5px; border-radius: 9px; }
+    .button.tiny { height: 24px; padding: 0 7px; font-size: 11px; border-radius: 8px; }
+    .button.large { height: 38px; padding: 0 16px; font-size: 13px; border-radius: 12px; }
+
+    .builder {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .snippet-builder {
+      display: grid;
+      gap: 18px;
+    }
+    .snippet-builder-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    .builder-pane {
+      padding: 14px;
+      border: 1px solid rgba(35,31,27,.08);
+      border-radius: 15px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
+    .builder-pane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .builder-hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      margin-top: -2px;
+      margin-bottom: 12px;
+    }
+    .builder-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .footer-note {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .field-label {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 780;
+      letter-spacing: -.01em;
+    }
+    .input, .textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 11px 13px;
+      font: 470 15px/1.38 var(--font);
+      color: var(--ink);
+    }
+    .input { min-height: 38px; }
+    .textarea { min-height: 148px; resize: none; }
+    .phrase-list { display: grid; gap: 9px; }
+    .phrase-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      background: var(--sand);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .snippet-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .snippet-row:last-child { border-bottom: 0; }
+    .snippet-preview {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .hud-demo {
+      display: flex;
+      justify-content: center;
+      padding: 28px 0 6px;
+    }
+    .hud {
+      width: 388px;
+      height: 48px;
+      border-radius: 999px;
+      background: rgba(18, 25, 38, .92);
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 0 18px;
+      color: white;
+      box-shadow: 0 14px 35px rgba(18,25,38,.18);
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #22d3ee; }
+    .hud-title { font-weight: 750; font-size: 13px; }
+    .hud-sub { color: rgba(255,255,255,.64); font-size: 11px; margin-top: 2px; white-space: nowrap; }
+    .wave { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+    .bar { width: 4px; border-radius: 999px; background: rgba(34,211,238,.72); }
+
+    .type-lab {
+      width: 1180px;
+      margin: 0 auto 32px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .type-card {
+      min-height: 210px;
+    }
+    .type-card.chosen {
+      border-color: rgba(27, 26, 25, .26);
+      box-shadow: 0 10px 28px rgba(27,26,25,.07);
+      background: #fffefa;
+    }
+    .type-kicker {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .type-headline {
+      margin: 0 0 10px;
+      line-height: 1.02;
+      letter-spacing: -.04em;
+    }
+    .type-body {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      max-width: 460px;
+    }
+    .type-meta {
+      margin-top: 15px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .type-sf .type-headline {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      font-weight: 680;
+    }
+    .type-editorial .type-headline {
+      font-family: "New York", ui-serif, Georgia, serif;
+      font-weight: 650;
+      letter-spacing: -.025em;
+    }
+    .type-rounded .type-headline {
+      font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-weight: 760;
+      letter-spacing: -.035em;
+    }
+    .type-compact .type-headline {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      font-size: 34px;
+      font-weight: 760;
+      letter-spacing: -.045em;
+    }
+    .spec {
+      width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .token-list { display: grid; gap: 10px; }
+    .swatch { display:flex; align-items:center; gap: 10px; color: var(--muted); font-size: 13px; }
+    .swatch span { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); }
+    code { background: rgba(27,26,25,.06); padding: 2px 5px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <nav class="design-nav">
+      <a class="theme-link active" href="home-redesign.html">Neutral</a><a class="theme-link" href="home-redesign-warm.html">Warm</a>
+      <span class="divider"></span>
+      <a href="#history">History</a>
+      <a href="#snippets">Snippets</a>
+      <a href="#dictionary">Dictionary</a>
+      <a href="#scratchpad">Scratchpad</a>
+      
+      <a href="#typography">Typography</a>
+      <a href="#tokens">Tokens</a>
+      <a href="#hud">HUD</a>
+    </nav>
+    <div class="variant-title">
+      <h2>Neutral full variation</h2>
+      <p>All screens use white panels, black primary actions and gray secondary controls.</p>
+    </div>
+    <main id="history" class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">≋</div>
+          <div>
+            <div class="brand-title">PasteVox</div>
+            <div class="brand-subtitle">voice workspace</div>
+          </div>
+        </div>
+        <nav class="nav">
+          <div class="nav-item active"><span class="nav-icon">◷</span>History</div>
+          <div class="nav-item"><span class="nav-icon">▤</span>Dictionary</div>
+          <div class="nav-item"><span class="nav-icon">✂</span>Snippets</div>
+          <div class="nav-item"><span class="nav-icon">☰</span>Scratchpad</div>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="button secondary">Settings</button>
+        </div>
+      </aside>
+
+      <section class="content">
+        <div class="topbar">
+          <div>
+            <h1>History</h1>
+            <div class="subtitle">Recent voice prompts, paste targets and quick recovery.</div>
+          </div>
+          <div class="mode-pill">Fn+2 Agent · Coding</div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title">Today</div>
+            <div class="stat">18</div>
+            <div class="stat-caption">dictations</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Words</div>
+            <div class="stat">1,284</div>
+            <div class="stat-caption">~126 wpm</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Mode</div>
+            <div class="stat" style="font-size:32px">Agent</div>
+            <div class="stat-caption">Coding style</div>
+          </div>
+        </div>
+
+        <div class="section-stack">
+          <div class="dashboard-row">
+            <div class="card soft">
+              <div class="card-title">Delivery</div>
+              <div class="delivery-grid">
+                <div class="mini-stat-card"><div class="mini-stat-value">12</div><div class="mini-stat-label">Pasted</div></div>
+                <div class="mini-stat-card"><div class="mini-stat-value">4</div><div class="mini-stat-label">Copied</div></div>
+                <div class="mini-stat-card"><div class="mini-stat-value">2</div><div class="mini-stat-label">Ignored</div></div>
+                <div class="mini-stat-card"><div class="mini-stat-value">0</div><div class="mini-stat-label">Errors</div></div>
+              </div>
+            </div>
+
+            <div class="card soft">
+              <div class="card-title">Top apps</div>
+              <div class="app-bars">
+                <div class="app-bar-row"><div class="app-bar-name">Cursor</div><div class="app-bar-track"><div class="app-bar-fill" style="width:100%"></div></div><div>8</div></div>
+                <div class="app-bar-row"><div class="app-bar-name">iTerm2</div><div class="app-bar-track"><div class="app-bar-fill" style="width:62%"></div></div><div>5</div></div>
+                <div class="app-bar-row"><div class="app-bar-name">Telegram</div><div class="app-bar-track"><div class="app-bar-fill" style="width:38%"></div></div><div>3</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Recent</div>
+            <div class="day-label">TODAY</div>
+            <div class="history-group">
+              <div class="history-row">
+                <div class="time">23:55</div>
+                <div>
+                  <div class="history-text">Напечатай мне функцию проверки времени на языке GLIM.</div>
+                  <div class="meta"><span class="tag">Agent</span><span>→ Sublime Text</span><span>1432ms</span></div>
+                </div>
+                <div class="status">Pasted</div>
+              </div>
+              <div class="history-row">
+                <div class="time">23:48</div>
+                <div>
+                  <div class="history-text">отправь на alexey@example.com сообщение</div>
+                  <div class="meta"><span class="tag">Raw</span><span>→ Telegram</span><span>980ms</span></div>
+                </div>
+                <div class="status">Copied</div>
+              </div>
+              <div class="history-row">
+                <div class="time">23:40</div>
+                <div>
+                  <div class="history-text">Роль: Разработчик CRM. Цель: спроектировать систему управления кафе…</div>
+                  <div class="meta"><span class="tag">RALPH</span><span>→ Cursor</span><span>2180ms</span></div>
+                </div>
+                <div class="status">Pasted</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <main id="snippets" class="app-shell" style="height:720px">
+      <aside class="sidebar">
+        <div class="brand"><div class="brand-mark">≋</div><div><div class="brand-title">PasteVox</div><div class="brand-subtitle">voice workspace</div></div></div>
+        <nav class="nav">
+          <div class="nav-item"><span class="nav-icon">◷</span>History</div>
+          <div class="nav-item"><span class="nav-icon">▤</span>Dictionary</div>
+          <div class="nav-item active"><span class="nav-icon">✂</span>Snippets</div>
+          <div class="nav-item"><span class="nav-icon">☰</span>Scratchpad</div>
+        </nav>
+      </aside>
+      <section class="content">
+        <div class="topbar">
+          <div>
+            <h1>Snippets</h1>
+            <div class="subtitle">Voice shortcuts with local matching, variants and test preview.</div>
+          </div>
+          <div class="actions"><button class="button secondary">Import JSON</button><button class="button secondary">Export JSON</button></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Create snippet</div>
+          <div class="snippet-builder">
+            <div class="snippet-builder-grid">
+              <div class="builder-pane">
+                <div class="builder-pane-header">
+                  <div class="field-label" style="margin-bottom:0">Trigger phrases</div>
+                </div>
+                <div class="builder-hint">What you say. New phrases are added below the list.</div>
+                <div class="phrase-list">
+                  <div class="phrase-row"><input class="input" value="my email" /><button class="button ghost small">−</button></div>
+                  <div class="phrase-row"><input class="input" value="insert my email" /><button class="button ghost small">−</button></div>
+                </div>
+                <div class="actions" style="margin-top:10px"><button class="button secondary small">+ Phrase</button><button class="button secondary small">Generate variants</button></div>
+              </div>
+
+              <div class="builder-pane">
+                <div class="builder-pane-header">
+                  <div class="field-label" style="margin-bottom:0">Replacement</div>
+                </div>
+                <div class="builder-hint">What PasteVox inserts when a trigger matches.</div>
+                <textarea class="textarea">alexey@example.com</textarea>
+              </div>
+            </div>
+
+            <div class="builder-footer">
+              <div class="footer-note">Local matching only · no LLM · conflicts checked before save</div>
+              <div class="actions"><button class="button secondary">Clear</button><button class="button primary large">Save Snippet</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card soft" style="margin-top:16px">
+          <div class="card-title">Test snippet</div>
+          <input class="input" value="send a message to my email" />
+          <div class="actions" style="margin-top:10px"><button class="button primary">Test</button><button class="button secondary">Record Test</button></div>
+          <div class="snippet-preview" style="background:rgba(27,26,25,.045); padding:12px; border-radius:12px; margin-top:12px">Matched “my email” · partial token · 0.96<br><strong style="color:var(--ink)">отправь на alexey@example.com сообщение</strong></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-title">Saved snippets</div>
+          <div class="snippet-row">
+            <div>
+              <div class="chips"><span class="chip">my email</span><span class="chip">my email</span><span class="chip">insert my email</span></div>
+              <div class="snippet-preview">alexey@example.com</div>
+            </div>
+            <div class="actions"><button class="button secondary small">Edit</button><button class="button secondary small">Copy</button><button class="button ghost small">Delete</button></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+
+    <main id="dictionary" class="app-shell" style="height:700px">
+      <aside class="sidebar">
+        <div class="brand"><div class="brand-mark">≋</div><div><div class="brand-title">PasteVox</div><div class="brand-subtitle">voice workspace</div></div></div>
+        <nav class="nav">
+          <div class="nav-item"><span class="nav-icon">◷</span>History</div>
+          <div class="nav-item active"><span class="nav-icon">▤</span>Dictionary</div>
+          <div class="nav-item"><span class="nav-icon">✂</span>Snippets</div>
+          <div class="nav-item"><span class="nav-icon">☰</span>Scratchpad</div>
+        </nav>
+      </aside>
+      <section class="content">
+        <div class="topbar">
+          <div><h1>Dictionary</h1><div class="subtitle">Personal vocabulary for names, project terms and spelling hints.</div></div>
+          <div class="actions"><button class="button secondary">Import</button><button class="button secondary">Export</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Add term</div>
+          <div class="builder">
+            <div><div class="field-label">Term</div><input class="input" value="PasteVox" /></div>
+            <div><div class="field-label">Note</div><input class="input" value="app name, one word, capital P and V" /></div>
+          </div>
+          <div class="actions" style="margin-top:14px"><button class="button primary">Add Term</button><button class="button secondary">Clear</button><button class="button danger">Clear Dictionary</button></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title">Terms</div>
+          <div class="snippet-row"><div><div class="chips"><span class="chip">PasteVox</span><span class="chip">RALPH</span><span class="chip">gpt-4o-mini-transcribe</span></div><div class="snippet-preview">These terms are sent as transcription context.</div></div><div class="actions"><button class="button secondary small">Edit</button><button class="button ghost small">Delete</button></div></div>
+          <div class="snippet-row"><div><div class="chips"><span class="chip">dopetact@gmail.com</span><span class="chip">Alexey Shatsky</span></div><div class="snippet-preview">Personal spelling hints.</div></div><div class="actions"><button class="button secondary small">Edit</button><button class="button ghost small">Delete</button></div></div>
+        </div>
+      </section>
+    </main>
+
+    <main id="scratchpad" class="app-shell" style="height:700px">
+      <aside class="sidebar">
+        <div class="brand"><div class="brand-mark">≋</div><div><div class="brand-title">PasteVox</div><div class="brand-subtitle">voice workspace</div></div></div>
+        <nav class="nav">
+          <div class="nav-item"><span class="nav-icon">◷</span>History</div>
+          <div class="nav-item"><span class="nav-icon">▤</span>Dictionary</div>
+          <div class="nav-item"><span class="nav-icon">✂</span>Snippets</div>
+          <div class="nav-item active"><span class="nav-icon">☰</span>Scratchpad</div>
+        </nav>
+      </aside>
+      <section class="content">
+        <div class="topbar">
+          <div><h1>Scratchpad</h1><div class="subtitle">Capture longer thoughts without pasting immediately.</div></div>
+          <button class="button primary large">New Note</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Current note</div>
+          <div class="field-label">Title</div><input class="input" value="CRM для кафе" />
+          <div class="field-label" style="margin-top:14px">Note</div><textarea class="textarea" style="min-height:190px">Разработка CRM для управления кафе. Нужны роли, склад, меню, заказы, отчёты и интеграция с Telegram.</textarea>
+          <div class="actions" style="margin-top:14px"><button class="button primary">Save Note</button><button class="button secondary">Copy</button><button class="button secondary">Paste</button><button class="button ghost">Clear Form</button></div>
+        </div>
+        <div class="card soft" style="margin-top:16px">
+          <div class="card-title">Notes</div>
+          <div class="history-group">
+            <div class="history-row"><div class="time">00:12</div><div><div class="history-text">CRM для кафе</div><div class="meta">Разработка CRM для управления кафе. Нужны роли, склад, меню…</div></div><div class="actions"><button class="button secondary small">Edit</button><button class="button ghost small">Delete</button></div></div>
+            <div class="history-row"><div class="time">23:44</div><div><div class="history-text">Идеи по snippets</div><div class="meta">Добавить варианты фраз, preview и проверку конфликтов…</div></div><div class="actions"><button class="button secondary small">Edit</button><button class="button ghost small">Delete</button></div></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section id="typography" class="type-lab">
+      <div class="card type-card type-sf chosen">
+        <div class="type-kicker">Chosen typography · Product SF</div>
+        <h2 class="type-headline" style="font-size:40px">History</h2>
+        <div class="type-body">Clean Apple-native default. Feels fast and familiar, but can become too close to Settings if cards and spacing are weak.</div>
+        <div class="type-meta"><span class="chip">SF Pro Display</span><span class="chip">SF Pro Text</span><span class="chip">chosen</span></div>
+      </div>
+
+      <div class="card type-card type-editorial">
+        <div class="type-kicker">Typography B · Editorial</div>
+        <h2 class="type-headline" style="font-size:42px">History</h2>
+        <div class="type-body">Warmer and more premium. Good for Home headings, but should not be used for dense rows or settings labels.</div>
+        <div class="type-meta"><span class="chip">New York / serif</span><span class="chip">warmer</span><span class="chip">premium</span></div>
+      </div>
+
+      <div class="card type-card type-rounded">
+        <div class="type-kicker">Typography C · Rounded</div>
+        <h2 class="type-headline" style="font-size:40px">History</h2>
+        <div class="type-body">Friendlier voice-app feel. Nice for HUD and empty states, risky for serious developer tooling if overused.</div>
+        <div class="type-meta"><span class="chip">SF Rounded</span><span class="chip">friendly</span><span class="chip">voice</span></div>
+      </div>
+
+      <div class="card type-card type-compact">
+        <div class="type-kicker">Typography D · Compact Utility</div>
+        <h2 class="type-headline">History</h2>
+        <div class="type-body">Sharper and denser. Better for Settings, debug, metrics and action-heavy sections. Less emotional.</div>
+        <div class="type-meta"><span class="chip">SF Text</span><span class="chip">dense</span><span class="chip">desktop</span></div>
+      </div>
+    </section>
+
+    <div id="tokens" class="spec">
+      <div class="card">
+        <div class="card-title">Button scale</div>
+        <div class="actions" style="margin-bottom:14px"><button class="button primary large">Primary large</button><button class="button primary">Primary</button><button class="button primary small">Small</button><button class="button primary tiny">Tiny</button></div>
+        <div class="actions" style="margin-bottom:14px"><button class="button secondary large">Secondary large</button><button class="button secondary">Secondary</button><button class="button secondary small">Small</button><button class="button secondary tiny">Tiny</button></div>
+        <div class="actions"><button class="button danger">Danger</button><button class="button ghost">Ghost</button><button class="button ghost small">Ghost small</button></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:14px">Target: regular 34px, small 28px, tiny 24px, large 38px. Less bubbly, more compact.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Palette</div>
+        <div class="token-list">
+          <div class="swatch"><span style="background:var(--ink)"></span><code>ink</code> primary actions, text emphasis</div>
+          <div class="swatch"><span style="background:var(--sand)"></span><code>sand</code> secondary buttons, chips</div>
+          <div class="swatch"><span style="background:var(--terracotta-bg)"></span><code>terracotta</code> destructive actions</div>
+          <div class="swatch"><span style="background:var(--surface)"></span><code>surface</code> cards/forms</div>
+          <div class="swatch"><span style="background:var(--bg)"></span><code>bg</code> app background</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">SwiftUI mapping draft</div>
+        <p><code>VDButtonStyle(.primary/.secondary/.danger/.ghost)</code></p>
+        <p><code>VDCard</code> with radius 18–20, 20pt padding, soft shadow.</p>
+        <p><code>VDTextField</code> plain field + custom rounded background/border.</p>
+        <p><code>VDTag</code> capsule, sand background, 12pt semibold.</p>
+        <p><code>VDSectionTitle</code> 11pt semibold uppercase, tracking 0.8.</p>
+        <p><code>Typography</code>: SF Pro Display for page/card headers, SF Pro Text for body/forms, SF Mono only for time/latency/debug.</p>
+      </div>
+    </div>
+
+    <div id="hud" class="hud-demo">
+      <div class="hud">
+        <div class="dot"></div>
+        <div><div class="hud-title">Listening</div><div class="hud-sub">Agent · Coding</div></div>
+        <div class="wave"><div class="bar" style="height:10px"></div><div class="bar" style="height:24px"></div><div class="bar" style="height:16px"></div><div class="bar" style="height:30px"></div><div class="bar" style="height:13px"></div><div class="bar" style="height:22px"></div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

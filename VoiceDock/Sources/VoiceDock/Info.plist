@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.voicedock.app</string>
+    <string>com.pastevox.app</string>
     <key>CFBundleName</key>
-    <string>VoiceDock</string>
+    <string>PasteVox</string>
     <key>CFBundleDisplayName</key>
-    <string>VoiceDock</string>
+    <string>PasteVox</string>
     <key>CFBundleExecutable</key>
-    <string>VoiceDock</string>
+    <string>PasteVox</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -21,6 +21,6 @@
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>VoiceDock needs microphone access to record dictated prompts.</string>
+    <string>PasteVox needs microphone access to record dictated prompts.</string>
 </dict>
 </plist>

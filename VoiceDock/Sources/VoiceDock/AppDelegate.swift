@@ -5,10 +5,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyActivationPolicy()
-        LocalLogger.shared.info("VoiceDock 0.0.10 started mode=\(AppSettings.shared.promptMode.rawValue) transcription_mode=\(AppSettings.shared.transcriptionMode.rawValue) stt_model=\(AppSettings.shared.sttModel.rawValue) paste_auto=\(AppSettings.shared.pasteAutomatically) postprocess=\(AppSettings.shared.postProcessingEnabled) mic=\(PermissionsManager.shared.microphonePermissionDescription().replacingOccurrences(of: " ", with: "_")) accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false))")
+        LocalLogger.shared.info("PasteVox 0.0.10 started mode=\(AppSettings.shared.promptMode.rawValue) transcription_mode=\(AppSettings.shared.transcriptionMode.rawValue) stt_model=\(AppSettings.shared.sttModel.rawValue) paste_auto=\(AppSettings.shared.pasteAutomatically) postprocess=\(AppSettings.shared.postProcessingEnabled) mic=\(PermissionsManager.shared.microphonePermissionDescription().replacingOccurrences(of: " ", with: "_")) accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false))")
         FloatingHUDController.shared.configureIfNeeded()
         configureStatusItem()
         HotkeyManager.shared.start()
+        scheduleHotkeyMonitorWarmupRestart()
         FloatingHUDController.shared.hide()
     }
 
@@ -21,6 +22,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             HomeWindowController.shared.show()
         }
         return true
+    }
+
+    private func scheduleHotkeyMonitorWarmupRestart() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard HotkeyManager.shared.isRunning, !HotkeyManager.shared.isPressed else { return }
+            HotkeyManager.shared.restart()
+        }
     }
 
     @MainActor
@@ -47,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             item.button?.title = "🎙"
         }
-        item.button?.toolTip = "VoiceDock"
+        item.button?.toolTip = "PasteVox"
 
         let menu = NSMenu()
 
@@ -81,7 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             keyEquivalent: "h"
         ))
         menu.addItem(NSMenuItem(
-            title: "Open Settings…",
+            title: "Settings",
             action: #selector(openSettings),
             keyEquivalent: ","
         ))
@@ -109,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(
-            title: "Quit VoiceDock",
+            title: "Quit PasteVox",
             action: #selector(quit),
             keyEquivalent: "q"
         ))

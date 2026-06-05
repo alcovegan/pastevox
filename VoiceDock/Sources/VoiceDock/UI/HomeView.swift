@@ -54,9 +54,9 @@ struct HomeView: View {
                     header
                     content
                 }
-                .padding(.horizontal, 34)
-                .padding(.vertical, 30)
-                .frame(maxWidth: 900, alignment: .leading)
+                .padding(.horizontal, 42)
+                .padding(.vertical, 34)
+                .frame(maxWidth: 940, alignment: .leading)
             }
             .frame(maxWidth: .infinity)
             .background(homeBackground)
@@ -66,17 +66,14 @@ struct HomeView: View {
 
     private var homeBackground: some ShapeStyle {
         LinearGradient(
-            colors: [
-                Color(nsColor: .windowBackgroundColor),
-                Color(nsColor: .controlBackgroundColor).opacity(0.55)
-            ],
+            colors: [HomePalette.surface, HomePalette.background],
             startPoint: .top,
             endPoint: .bottom
         )
     }
 
     private var sidebarBackground: some ShapeStyle {
-        Color(nsColor: .controlBackgroundColor).opacity(0.86)
+        HomePalette.surfaceSecondary
     }
 
     private var sidebar: some View {
@@ -86,9 +83,9 @@ struct HomeView: View {
                     .font(.title2)
                     .foregroundStyle(.white)
                     .frame(width: 34, height: 34)
-                    .background(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 10))
+                    .background(LinearGradient(colors: [HomePalette.ink, HomePalette.ink.opacity(0.72)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 11))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("VoiceDock")
+                    Text("PasteVox")
                         .font(.system(size: 16, weight: .semibold))
                     Text("Home")
                         .font(.system(size: 12, weight: .medium))
@@ -120,7 +117,7 @@ struct HomeView: View {
 
             Spacer()
 
-            Button("Open Settings…") {
+            Button("Settings") {
                 SettingsWindowController.shared.show(
                     settings: AppSettings.shared,
                     hudController: FloatingHUDController.shared
@@ -129,14 +126,15 @@ struct HomeView: View {
             .buttonStyle(HomeButtonStyle(.secondary, size: .regular))
         }
         .padding(20)
-        .frame(width: 224)
+        .frame(width: 232)
         .background(sidebarBackground)
+        .overlay(Rectangle().fill(HomePalette.line).frame(width: 1), alignment: .trailing)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(selectedSection.rawValue)
-                .font(.system(size: 38, weight: .semibold))
+                .font(.system(size: 40, weight: .semibold))
                 .tracking(-0.6)
             Text(subtitle(for: selectedSection))
                 .font(.system(size: 15, weight: .regular))
@@ -149,6 +147,7 @@ struct HomeView: View {
         switch selectedSection {
         case .history:
             stats
+            usageDashboard
             recentDictations
         case .dictionary:
             dictionarySection
@@ -163,7 +162,7 @@ struct HomeView: View {
         HStack(spacing: 14) {
             HomeCard("Today") {
                 Text("\(historyStore.todayEntries.count)")
-                    .font(.system(size: 38, weight: .semibold, design: .rounded))
+                    .font(.system(size: 38, weight: .semibold))
                     .tracking(-0.8)
                 Text("dictations")
                     .font(.system(size: 14))
@@ -171,7 +170,7 @@ struct HomeView: View {
             }
             HomeCard("Words") {
                 Text("\(historyStore.totalWords)")
-                    .font(.system(size: 38, weight: .semibold, design: .rounded))
+                    .font(.system(size: 38, weight: .semibold))
                     .tracking(-0.8)
                 Text(historyStore.averageWordsPerMinute.map { "~\($0) wpm" } ?? "wpm n/a")
                     .font(.system(size: 14))
@@ -188,27 +187,112 @@ struct HomeView: View {
         }
     }
 
+    private var usageDashboard: some View {
+        HStack(alignment: .top, spacing: 14) {
+            HomeCard("Delivery", isSoft: true) {
+                HStack(spacing: 8) {
+                    miniStat("\(historyStore.pastedCount)", "Pasted")
+                    miniStat("\(historyStore.copiedCount)", "Copied")
+                    miniStat("\(historyStore.ignoredCount)", "Ignored")
+                    miniStat("\(historyStore.errorCount)", "Errors")
+                }
+            }
+
+            HomeCard("Top apps", isSoft: true) {
+                let apps = historyStore.topApps()
+                if apps.isEmpty {
+                    Text("No app data yet")
+                        .font(.system(size: 13))
+                        .foregroundStyle(HomePalette.muted)
+                } else {
+                    VStack(spacing: 10) {
+                        let maxCount = max(apps.map(\.count).max() ?? 1, 1)
+                        ForEach(apps, id: \.name) { app in
+                            appUsageRow(name: app.name, count: app.count, maxCount: maxCount)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func miniStat(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(value)
+                .font(.system(size: 24, weight: .semibold))
+                .tracking(-0.4)
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(HomePalette.muted)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
+        .background(HomePalette.surface, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(HomePalette.line, lineWidth: 1))
+    }
+
+    private func appUsageRow(name: String, count: Int, maxCount: Int) -> some View {
+        HStack(spacing: 10) {
+            Text(name)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(HomePalette.ink)
+                .lineLimit(1)
+                .frame(width: 84, alignment: .leading)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(HomePalette.ink.opacity(0.08))
+                    Capsule().fill(HomePalette.ink.opacity(0.72))
+                        .frame(width: proxy.size.width * CGFloat(count) / CGFloat(maxCount))
+                }
+            }
+            .frame(height: 7)
+            Text("\(count)")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(HomePalette.muted)
+                .frame(width: 24, alignment: .trailing)
+        }
+    }
+
     private var dictionarySection: some View {
         VStack(spacing: 14) {
             HomeCard("Add term") {
-                Text("Dictionary terms are sent as STT context so OpenAI prefers your names, project terms and spellings.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-                TextField("Term, name, email, project…", text: $newDictionaryTerm)
-                    .textFieldStyle(.roundedBorder)
-                TextField("Optional note, e.g. company name or spelling hint", text: $newDictionaryNote)
-                    .textFieldStyle(.roundedBorder)
-                HStack {
-                    Button("Add") {
-                        dictionaryStore.add(text: newDictionaryTerm, note: newDictionaryNote)
-                        newDictionaryTerm = ""
-                        newDictionaryNote = ""
+                VStack(spacing: 14) {
+                    Text("Dictionary terms are sent as STT context so OpenAI prefers your names, project terms and spellings.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(HomePalette.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Term")
+                                .font(.system(size: 13, weight: .semibold))
+                            HomeInputField("PasteVox, project name, email…", text: $newDictionaryTerm)
+                        }
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Note")
+                                .font(.system(size: 13, weight: .semibold))
+                            HomeInputField("Optional spelling/context hint", text: $newDictionaryNote)
+                        }
                     }
-                    .buttonStyle(HomeButtonStyle(.primary))
-                    .disabled(newDictionaryTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Button("Clear Dictionary") { dictionaryStore.clear() }
-                        .buttonStyle(HomeButtonStyle(.danger))
-                        .disabled(dictionaryStore.terms.isEmpty)
+
+                    Divider().overlay(HomePalette.line)
+
+                    HStack {
+                        Text("Terms are local and only used as transcription context.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(HomePalette.muted)
+                        Spacer()
+                        Button("Clear Dictionary") { dictionaryStore.clear() }
+                            .buttonStyle(HomeButtonStyle(.danger))
+                            .disabled(dictionaryStore.terms.isEmpty)
+                        Button("Add Term") {
+                            dictionaryStore.add(text: newDictionaryTerm, note: newDictionaryNote)
+                            newDictionaryTerm = ""
+                            newDictionaryNote = ""
+                        }
+                        .buttonStyle(HomeButtonStyle(.primary, size: .large))
+                        .disabled(newDictionaryTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
                 }
             }
 
@@ -222,22 +306,26 @@ struct HomeView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(dictionaryStore.terms) { term in
-                            HStack(alignment: .firstTextBaseline) {
-                                VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .center, spacing: 14) {
+                                VStack(alignment: .leading, spacing: 7) {
                                     Text(term.text)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .padding(.vertical, 4)
+                                        .padding(.horizontal, 9)
+                                        .background(HomePalette.sand, in: Capsule())
                                     if !term.note.isEmpty {
                                         Text(term.note)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(HomePalette.muted)
                                     }
                                 }
                                 Spacer()
                                 Button("Delete") { dictionaryStore.delete(term) }
                                     .buttonStyle(HomeButtonStyle(.ghost, size: .small))
                             }
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 12)
                             if term.id != dictionaryStore.terms.last?.id {
-                                Divider()
+                                Divider().overlay(HomePalette.line)
                             }
                         }
                     }
@@ -249,103 +337,92 @@ struct HomeView: View {
     private var snippetsSection: some View {
         VStack(spacing: 14) {
             HomeCard(editingSnippetID == nil ? "Create snippet" : "Edit snippet") {
-                Text("Create a voice shortcut: say the trigger phrase alone, VoiceDock inserts the replacement text.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 18) {
+                    HStack(alignment: .top, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Trigger phrases")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("What you say. New phrases are added below the list.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(HomePalette.muted)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("1. Say any of these phrases")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    VStack(spacing: 8) {
-                        ForEach(newSnippetTriggers.indices, id: \.self) { index in
-                            HStack {
-                                TextField(index == 0 ? "мой имейл" : "вставь мой имейл", text: $newSnippetTriggers[index])
-                                    .textFieldStyle(.plain)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 10)
-                                    .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.14), lineWidth: 1))
-                                Button("−") { newSnippetTriggers.remove(at: index) }
-                                    .buttonStyle(HomeButtonStyle(.ghost, size: .small))
-                                    .disabled(newSnippetTriggers.count == 1)
+                            VStack(spacing: 9) {
+                                ForEach(newSnippetTriggers.indices, id: \.self) { index in
+                                    HStack(spacing: 8) {
+                                        HomeInputField(index == 0 ? "my email" : "insert my email", text: $newSnippetTriggers[index])
+                                        Button("−") { newSnippetTriggers.remove(at: index) }
+                                            .buttonStyle(HomeButtonStyle(.ghost, size: .small))
+                                            .disabled(newSnippetTriggers.count == 1)
+                                    }
+                                }
+                            }
+
+                            HStack(spacing: 8) {
+                                Button("+ Phrase") { newSnippetTriggers.append("") }
+                                    .buttonStyle(HomeButtonStyle(.secondary, size: .small))
+                                Button("Generate variants") { generateSnippetVariants() }
+                                    .buttonStyle(HomeButtonStyle(.secondary, size: .small))
+                                    .disabled(newSnippetTriggers.allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
                             }
                         }
-                        HStack {
-                            Button("+ Add phrase") { newSnippetTriggers.append("") }
-                                .buttonStyle(HomeButtonStyle(.secondary, size: .small))
-                            Button("Generate Russian variants") { generateSnippetVariants() }
-                                .buttonStyle(HomeButtonStyle(.secondary, size: .small))
-                                .disabled(newSnippetTriggers.allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+                        .padding(14)
+                        .frame(maxWidth: .infinity, minHeight: 230, alignment: .topLeading)
+                        .background(HomePalette.surface, in: RoundedRectangle(cornerRadius: 15))
+                        .overlay(RoundedRectangle(cornerRadius: 15).stroke(HomePalette.line, lineWidth: 1))
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Replacement")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("What PasteVox inserts when a trigger matches.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(HomePalette.muted)
+                            TextEditor(text: $newSnippetReplacement)
+                                .homeTextEditor(height: 150)
                         }
-                        .font(.caption)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, minHeight: 230, alignment: .topLeading)
+                        .background(HomePalette.surface, in: RoundedRectangle(cornerRadius: 15))
+                        .overlay(RoundedRectangle(cornerRadius: 15).stroke(HomePalette.line, lineWidth: 1))
                     }
-                }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("2. Insert this text")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    TextEditor(text: $newSnippetReplacement)
-                        .font(.system(size: 14))
-                        .scrollContentBackground(.hidden)
-                        .frame(height: 120)
-                        .padding(10)
-                        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.14), lineWidth: 1))
-                    if newSnippetReplacement.isEmpty {
-                        Text("Text to insert, e.g. alexey@example.com")
+                    HStack(spacing: 8) {
+                        Button("Example: email") {
+                            newSnippetTriggers = ["мой имейл", "вставь мой имейл"]
+                            newSnippetReplacement = "alexey@example.com"
+                            newSnippetStatus = ""
+                        }
+                        .buttonStyle(HomeButtonStyle(.secondary, size: .small))
+                        Button("Example: RALPH") {
+                            newSnippetTriggers = ["ральф промт", "вставь ральф промт", "ralph prompt"]
+                            newSnippetReplacement = """
+                            Роль:
+                            Цель:
+                            Контекст:
+                            Ограничения:
+                            Acceptance criteria:
+                            """
+                            newSnippetStatus = ""
+                        }
+                        .buttonStyle(HomeButtonStyle(.secondary, size: .small))
+                        Spacer()
+                    }
+
+                    Divider().overlay(HomePalette.line)
+
+                    HStack(spacing: 10) {
+                        Text(newSnippetStatus.isEmpty ? "Local matching only · no LLM · conflicts checked before save" : newSnippetStatus)
                             .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    Button("Example: email") {
-                        newSnippetTriggers = ["мой имейл", "вставь мой имейл"]
-                        newSnippetReplacement = "alexey@example.com"
-                        newSnippetStatus = ""
-                    }
-                    .buttonStyle(HomeButtonStyle(.secondary, size: .small))
-                    Button("Example: RALPH") {
-                        newSnippetTriggers = ["ральф промт", "вставь ральф промт", "ralph prompt"]
-                        newSnippetReplacement = """
-                        Роль:
-                        Цель:
-                        Контекст:
-                        Ограничения:
-                        Acceptance criteria:
-                        """
-                        newSnippetStatus = ""
-                    }
-                    .buttonStyle(HomeButtonStyle(.secondary, size: .small))
-                }
-                .font(.system(size: 12))
-
-                HStack {
-                    Button(editingSnippetID == nil ? "Add Snippet" : "Save Snippet") { saveSnippet() }
-                        .buttonStyle(HomeButtonStyle(.primary))
-                        .keyboardShortcut(.defaultAction)
-                    if editingSnippetID != nil {
-                        Button("Cancel Edit") { resetSnippetForm() }
+                            .foregroundStyle(newSnippetStatus.isEmpty ? HomePalette.muted : statusColor(newSnippetStatus))
+                        Spacer()
+                        if editingSnippetID != nil {
+                            Button("Cancel") { resetSnippetForm() }
+                                .buttonStyle(HomeButtonStyle(.secondary))
+                        }
+                        Button("Clear") { resetSnippetForm() }
                             .buttonStyle(HomeButtonStyle(.secondary))
-                    }
-                    Button("Clear Form") {
-                        resetSnippetForm()
-                    }
-                    .buttonStyle(HomeButtonStyle(.secondary))
-                    Button("Import JSON") { importSnippetsJSON() }
-                        .buttonStyle(HomeButtonStyle(.secondary))
-                    Button("Export JSON") { exportSnippetsJSON() }
-                        .buttonStyle(HomeButtonStyle(.secondary))
-                        .disabled(snippetStore.snippets.isEmpty)
-                    Button("Clear Snippets") { snippetStore.clear() }
-                        .buttonStyle(HomeButtonStyle(.danger))
-                        .disabled(snippetStore.snippets.isEmpty)
-                    if !newSnippetStatus.isEmpty {
-                        Text(newSnippetStatus)
-                            .font(.caption)
-                            .foregroundStyle(newSnippetStatus.hasPrefix("Added") ? .green : .red)
+                        Button(editingSnippetID == nil ? "Save Snippet" : "Update Snippet") { saveSnippet() }
+                            .buttonStyle(HomeButtonStyle(.primary, size: .large))
+                            .keyboardShortcut(.defaultAction)
                     }
                 }
             }
@@ -354,12 +431,7 @@ struct HomeView: View {
                 Text("Type a transcript or record a test phrase. This never pastes anywhere.")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
-                TextField("вставь мою почту", text: $snippetTestInput)
-                    .textFieldStyle(.plain)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 10)
-                    .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.14), lineWidth: 1))
+                HomeInputField("insert my email", text: $snippetTestInput)
                 HStack {
                     Button("Test") { testSnippetInput() }
                         .buttonStyle(HomeButtonStyle(.primary))
@@ -383,7 +455,7 @@ struct HomeView: View {
                     if !snippetTestStatus.isEmpty {
                         Text(snippetTestStatus)
                             .font(.caption)
-                            .foregroundStyle(snippetTestStatus.hasPrefix("Matched") ? .green : .secondary)
+                            .foregroundStyle(snippetTestStatus.hasPrefix("Matched") ? HomePalette.ink : HomePalette.muted)
                     }
                 }
                 if !snippetTestOutput.isEmpty {
@@ -392,17 +464,23 @@ struct HomeView: View {
                         .textSelection(.enabled)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                        .background(HomePalette.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(HomePalette.line, lineWidth: 1))
                 }
             }
 
             HomeCard("Snippets") {
-                TextField("Search snippets", text: $snippetSearch)
-                    .textFieldStyle(.plain)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 10)
-                    .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.14), lineWidth: 1))
+                HStack(spacing: 8) {
+                    HomeInputField("Search snippets", text: $snippetSearch)
+                    Button("Import") { importSnippetsJSON() }
+                        .buttonStyle(HomeButtonStyle(.secondary, size: .small))
+                    Button("Export") { exportSnippetsJSON() }
+                        .buttonStyle(HomeButtonStyle(.secondary, size: .small))
+                        .disabled(snippetStore.snippets.isEmpty)
+                    Button("Clear") { snippetStore.clear() }
+                        .buttonStyle(HomeButtonStyle(.danger, size: .small))
+                        .disabled(snippetStore.snippets.isEmpty)
+                }
 
                 if filteredSnippets().isEmpty {
                     emptyState(
@@ -413,20 +491,24 @@ struct HomeView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(filteredSnippets()) { snippet in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        FlowLayout(spacing: 6) {
-                                            ForEach(snippet.allTriggers, id: \.self) { trigger in
-                                                Text(trigger)
-                                                    .font(.caption.weight(.medium))
-                                                    .padding(.vertical, 4)
-                                                    .padding(.horizontal, 8)
-                                                    .background(Color.accentColor.opacity(0.10), in: Capsule())
-                                            }
+                            HStack(alignment: .top, spacing: 18) {
+                                VStack(alignment: .leading, spacing: 9) {
+                                    FlowLayout(spacing: 6) {
+                                        ForEach(snippet.allTriggers, id: \.self) { trigger in
+                                            Text(trigger)
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .padding(.vertical, 5)
+                                                .padding(.horizontal, 9)
+                                                .background(HomePalette.sand, in: Capsule())
                                         }
                                     }
-                                    Spacer()
+                                    Text(snippet.replacement)
+                                        .font(.system(size: 13))
+                                        .lineLimit(3)
+                                        .foregroundStyle(HomePalette.muted)
+                                }
+                                Spacer()
+                                HStack(spacing: 7) {
                                     Button("Edit") { beginEditing(snippet) }
                                         .buttonStyle(HomeButtonStyle(.secondary, size: .small))
                                     Button("Copy") {
@@ -437,13 +519,10 @@ struct HomeView: View {
                                     Button("Delete") { snippetStore.delete(snippet) }
                                         .buttonStyle(HomeButtonStyle(.ghost, size: .small))
                                 }
-                                Text(snippet.replacement)
-                                    .lineLimit(3)
-                                    .foregroundStyle(.secondary)
                             }
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 13)
                             if snippet.id != filteredSnippets().last?.id {
-                                Divider()
+                                Divider().overlay(HomePalette.line)
                             }
                         }
                     }
@@ -455,7 +534,7 @@ struct HomeView: View {
     private func exportSnippetsJSON() {
         let panel = NSSavePanel()
         panel.title = "Export snippets"
-        panel.nameFieldStringValue = "voicedock-snippets.json"
+        panel.nameFieldStringValue = "pastevox-snippets.json"
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
@@ -579,17 +658,44 @@ struct HomeView: View {
     private func updateSnippet(_ snippet: VoiceSnippet) {
         let triggers = newSnippetTriggers.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let replacement = newSnippetReplacement.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !triggers.isEmpty else {
-            newSnippetStatus = "Trigger is empty."
-            return
-        }
-        guard !replacement.isEmpty else {
-            newSnippetStatus = "Replacement is empty."
-            return
-        }
+        guard validateSnippet(triggers: triggers, replacement: replacement, excluding: snippet.id) else { return }
 
         snippetStore.update(snippet, triggers: triggers, replacement: replacement)
         resetSnippetForm(status: "Saved.")
+    }
+
+    private func validateSnippet(triggers: [String], replacement: String, excluding snippetID: UUID?) -> Bool {
+        guard !triggers.isEmpty else {
+            newSnippetStatus = "Trigger is empty."
+            return false
+        }
+        guard !replacement.isEmpty else {
+            newSnippetStatus = "Replacement is empty."
+            return false
+        }
+
+        let normalizedTriggers = Set(triggers.map(normalizeConflictKey))
+        let duplicateSnippet = snippetStore.snippets.first { snippet in
+            snippet.id != snippetID && !Set(snippet.allTriggers.map(normalizeConflictKey)).isDisjoint(with: normalizedTriggers)
+        }
+        if let duplicateSnippet {
+            newSnippetStatus = "Trigger already used by snippet “\(duplicateSnippet.trigger)”."
+            return false
+        }
+
+        if let conflictingTerm = dictionaryStore.terms.first(where: { normalizedTriggers.contains(normalizeConflictKey($0.text)) }) {
+            newSnippetStatus = "Trigger conflicts with dictionary term “\(conflictingTerm.text)”."
+            return false
+        }
+
+        return true
+    }
+
+    private func normalizeConflictKey(_ value: String) -> String {
+        value.lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "ё", with: "е")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     }
 
     private func resetSnippetForm(status: String = "") {
@@ -602,14 +708,7 @@ struct HomeView: View {
     private func addSnippet() {
         let triggers = newSnippetTriggers.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let replacement = newSnippetReplacement.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !triggers.isEmpty else {
-            newSnippetStatus = "Trigger is empty."
-            return
-        }
-        guard !replacement.isEmpty else {
-            newSnippetStatus = "Replacement is empty."
-            return
-        }
+        guard validateSnippet(triggers: triggers, replacement: replacement, excluding: nil) else { return }
 
         snippetStore.add(trigger: triggers[0], triggers: triggers, replacement: replacement)
         resetSnippetForm(status: "Added.")
@@ -626,57 +725,49 @@ struct HomeView: View {
     private var scratchpadSection: some View {
         VStack(spacing: 14) {
             HomeCard(editingScratchpadID == nil ? "New note" : "Edit note") {
-                Text("Capture longer thoughts without auto-pasting. Save, copy or paste later.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Title")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    TextField("Optional title", text: $scratchpadTitle)
-                        .textFieldStyle(.plain)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 10)
-                        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.14), lineWidth: 1))
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Note")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    TextEditor(text: $scratchpadText)
+                VStack(spacing: 14) {
+                    Text("Capture longer thoughts without auto-pasting. Save, copy or paste later.")
                         .font(.system(size: 14))
-                        .scrollContentBackground(.hidden)
-                        .frame(height: 180)
-                        .padding(10)
-                        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.14), lineWidth: 1))
-                    if scratchpadText.isEmpty {
-                        Text("Type or paste a note here. Voice dictation-to-scratchpad comes next.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                        .foregroundStyle(HomePalette.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack {
-                    Button(editingScratchpadID == nil ? "Save Note" : "Update Note") { saveScratchpadNote() }
-                        .buttonStyle(HomeButtonStyle(.primary))
-                        .keyboardShortcut(.defaultAction)
-                    if editingScratchpadID != nil {
-                        Button("Cancel Edit") { resetScratchpadForm() }
-                            .buttonStyle(HomeButtonStyle(.secondary))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Title")
+                            .font(.system(size: 13, weight: .semibold))
+                        HomeInputField("Optional title", text: $scratchpadTitle)
                     }
-                    Button("Clear Form") { resetScratchpadForm() }
-                        .buttonStyle(HomeButtonStyle(.secondary))
-                    Button("Clear Notes") { scratchpadStore.clear() }
-                        .buttonStyle(HomeButtonStyle(.danger))
-                        .disabled(scratchpadStore.notes.isEmpty)
-                    if !scratchpadStatus.isEmpty {
-                        Text(scratchpadStatus)
-                            .font(.caption)
-                            .foregroundStyle(scratchpadStatus.hasPrefix("Saved") || scratchpadStatus.hasPrefix("Updated") ? .green : .red)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Note")
+                            .font(.system(size: 13, weight: .semibold))
+                        TextEditor(text: $scratchpadText)
+                            .homeTextEditor(height: 190)
+                        if scratchpadText.isEmpty {
+                            Text("Type or paste a note here. Voice dictation-to-scratchpad comes next.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(HomePalette.muted)
+                        }
+                    }
+
+                    Divider().overlay(HomePalette.line)
+
+                    HStack(spacing: 10) {
+                        Text(scratchpadStatus.isEmpty ? "Scratchpad saves drafts locally." : scratchpadStatus)
+                            .font(.system(size: 12))
+                            .foregroundStyle(scratchpadStatus.isEmpty ? HomePalette.muted : (scratchpadStatus.hasPrefix("Saved") || scratchpadStatus.hasPrefix("Updated") ? HomePalette.ink : HomePalette.terracotta))
+                        Spacer()
+                        if editingScratchpadID != nil {
+                            Button("Cancel") { resetScratchpadForm() }
+                                .buttonStyle(HomeButtonStyle(.secondary))
+                        }
+                        Button("Clear") { resetScratchpadForm() }
+                            .buttonStyle(HomeButtonStyle(.secondary))
+                        Button("Clear Notes") { scratchpadStore.clear() }
+                            .buttonStyle(HomeButtonStyle(.danger))
+                            .disabled(scratchpadStore.notes.isEmpty)
+                        Button(editingScratchpadID == nil ? "Save Note" : "Update Note") { saveScratchpadNote() }
+                            .buttonStyle(HomeButtonStyle(.primary, size: .large))
+                            .keyboardShortcut(.defaultAction)
                     }
                 }
             }
@@ -804,7 +895,8 @@ struct HomeView: View {
                                     }
                                 }
                             }
-                            .background(Color.secondary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+                            .background(HomePalette.surface, in: RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(HomePalette.line, lineWidth: 1))
                         }
                     }
                 }
@@ -814,7 +906,7 @@ struct HomeView: View {
                     if !status.isEmpty {
                         Text(status)
                             .font(.caption)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(HomePalette.ink)
                     }
                 }
                 .padding(.top, 8)
@@ -851,7 +943,7 @@ struct HomeView: View {
                         Text(entry.promptMode.shortTitle)
                             .padding(.vertical, 2)
                             .padding(.horizontal, 6)
-                            .background(Color.secondary.opacity(0.10), in: Capsule())
+                            .background(HomePalette.sand, in: Capsule())
                         if let target = entry.target {
                             Text("→ \(target.displayName)")
                                 .lineLimit(1)
@@ -926,14 +1018,37 @@ struct HomeView: View {
         return formatter.string(from: date)
     }
 
+    private func statusColor(_ message: String) -> Color {
+        message.hasPrefix("Added") || message.hasPrefix("Saved") || message.hasPrefix("Imported") || message.hasPrefix("Exported") ? HomePalette.successText : HomePalette.terracotta
+    }
+
     private func historyStatusColor(_ status: DictationHistoryStatus) -> Color {
         switch status {
-        case .pasted: .green
-        case .copied: .blue
-        case .ignored: .secondary
-        case .error: .red
+        case .pasted: HomePalette.successText
+        case .copied: HomePalette.ink.opacity(0.72)
+        case .ignored: HomePalette.muted
+        case .error: HomePalette.terracotta
         }
     }
+}
+
+private enum HomePalette {
+    static let background = Color(red: 0.96, green: 0.96, blue: 0.95)
+    static let surface = Color.white
+    static let surfaceSecondary = Color(red: 0.95, green: 0.95, blue: 0.94)
+    static let ink = Color(red: 0.06, green: 0.06, blue: 0.06)
+    static let inkPressed = Color(red: 0.16, green: 0.16, blue: 0.16)
+    static let muted = Color(red: 0.40, green: 0.40, blue: 0.40)
+    static let faint = Color(red: 0.65, green: 0.65, blue: 0.65)
+    static let line = Color.black.opacity(0.10)
+    static let lineStrong = Color.black.opacity(0.18)
+    static let sand = Color(red: 0.91, green: 0.91, blue: 0.90)
+    static let sandPressed = Color(red: 0.86, green: 0.86, blue: 0.84)
+    static let terracotta = Color(red: 0.18, green: 0.18, blue: 0.18)
+    static let terracottaFill = Color(red: 0.93, green: 0.93, blue: 0.92)
+    static let terracottaPressed = Color(red: 0.86, green: 0.86, blue: 0.84)
+    static let successFill = Color(red: 0.91, green: 0.91, blue: 0.89)
+    static let successText = Color(red: 0.20, green: 0.20, blue: 0.20)
 }
 
 private enum HomeButtonKind {
@@ -944,13 +1059,46 @@ private enum HomeButtonKind {
 }
 
 private enum HomeButtonSize {
+    case tiny
     case small
     case regular
+    case large
 
-    var verticalPadding: CGFloat { self == .small ? 5 : 7 }
-    var horizontalPadding: CGFloat { self == .small ? 9 : 12 }
-    var fontSize: CGFloat { self == .small ? 12 : 13 }
-    var cornerRadius: CGFloat { self == .small ? 8 : 10 }
+    var height: CGFloat {
+        switch self {
+        case .tiny: 24
+        case .small: 28
+        case .regular: 34
+        case .large: 38
+        }
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .tiny: 7
+        case .small: 9
+        case .regular: 13
+        case .large: 16
+        }
+    }
+
+    var fontSize: CGFloat {
+        switch self {
+        case .tiny: 11
+        case .small: 11.5
+        case .regular: 12.5
+        case .large: 13
+        }
+    }
+
+    var cornerRadius: CGFloat {
+        switch self {
+        case .tiny: 8
+        case .small: 9
+        case .regular: 11
+        case .large: 12
+        }
+    }
 }
 
 private struct HomeButtonStyle: ButtonStyle {
@@ -966,8 +1114,8 @@ private struct HomeButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: size.fontSize, weight: .semibold))
             .foregroundStyle(foregroundColor)
-            .padding(.vertical, size.verticalPadding)
             .padding(.horizontal, size.horizontalPadding)
+            .frame(height: size.height)
             .background(backgroundColor(configuration.isPressed), in: RoundedRectangle(cornerRadius: size.cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: size.cornerRadius)
@@ -980,56 +1128,148 @@ private struct HomeButtonStyle: ButtonStyle {
     private var foregroundColor: Color {
         switch kind {
         case .primary: .white
-        case .secondary: .primary
-        case .ghost: .secondary
-        case .danger: .red
+        case .secondary: HomePalette.ink
+        case .ghost: HomePalette.muted
+        case .danger: HomePalette.terracotta
         }
     }
 
     private func backgroundColor(_ isPressed: Bool) -> Color {
         switch kind {
-        case .primary: isPressed ? Color.accentColor.opacity(0.82) : Color.accentColor
-        case .secondary: Color.secondary.opacity(isPressed ? 0.16 : 0.09)
+        case .primary: isPressed ? HomePalette.inkPressed : HomePalette.ink
+        case .secondary: isPressed ? HomePalette.sandPressed : HomePalette.sand
         case .ghost: Color.clear
-        case .danger: Color.red.opacity(isPressed ? 0.14 : 0.08)
+        case .danger: isPressed ? HomePalette.terracottaPressed : HomePalette.terracottaFill
         }
     }
 
     private var borderColor: Color {
         switch kind {
         case .primary: .clear
-        case .secondary: Color.secondary.opacity(0.14)
-        case .ghost: Color.secondary.opacity(0.12)
-        case .danger: Color.red.opacity(0.18)
+        case .secondary: HomePalette.ink.opacity(0.08)
+        case .ghost: HomePalette.line
+        case .danger: HomePalette.terracotta.opacity(0.16)
         }
     }
 }
 
 private struct HomeCard<Content: View>: View {
     private let title: String
+    private let isSoft: Bool
     private let content: Content
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: String, isSoft: Bool = false, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.isSoft = isSoft
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(HomePalette.muted)
                 .tracking(0.8)
             content
         }
         .padding(20)
-        .frame(maxWidth: 780, alignment: .leading)
-        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 18))
+        .frame(maxWidth: 820, alignment: .leading)
+        .background(isSoft ? HomePalette.surfaceSecondary : HomePalette.surface, in: RoundedRectangle(cornerRadius: 18))
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+                .stroke(HomePalette.line, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 4)
+    }
+}
+
+private struct HomeInputField: View {
+    private let placeholder: String
+    @Binding private var text: String
+
+    init(_ placeholder: String, text: Binding<String>) {
+        self.placeholder = placeholder
+        self._text = text
+    }
+
+    var body: some View {
+        HomeNativeTextField(placeholder: placeholder, text: $text)
+            .padding(.horizontal, 12)
+            .frame(height: 38)
+            .background(HomePalette.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(HomePalette.line, lineWidth: 1))
+    }
+}
+
+private struct HomeNativeTextField: NSViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = NSTextField(string: text)
+        field.delegate = context.coordinator
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.usesSingleLineMode = true
+        field.lineBreakMode = .byTruncatingTail
+        field.font = NSFont.systemFont(ofSize: 15, weight: .regular)
+        field.textColor = NSColor(calibratedWhite: 0.06, alpha: 1)
+        field.placeholderAttributedString = placeholderString(placeholder)
+        return field
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text { nsView.stringValue = text }
+        nsView.placeholderAttributedString = placeholderString(placeholder)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    private func placeholderString(_ value: String) -> NSAttributedString {
+        NSAttributedString(
+            string: value,
+            attributes: [
+                .foregroundColor: NSColor(calibratedWhite: 0.48, alpha: 1),
+                .font: NSFont.systemFont(ofSize: 15, weight: .regular)
+            ]
+        )
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        @Binding private var text: String
+
+        init(text: Binding<String>) {
+            self._text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            text = field.stringValue
+        }
+    }
+}
+
+private struct HomeTextEditorModifier: ViewModifier {
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 15, weight: .regular))
+            .scrollContentBackground(.hidden)
+            .frame(height: height)
+            .padding(10)
+            .background(HomePalette.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(HomePalette.line, lineWidth: 1))
+    }
+}
+
+private extension View {
+    func homeTextEditor(height: CGFloat) -> some View {
+        modifier(HomeTextEditorModifier(height: height))
     }
 }
 

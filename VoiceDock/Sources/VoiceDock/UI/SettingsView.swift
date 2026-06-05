@@ -48,15 +48,16 @@ struct SettingsView: View {
     var body: some View {
         HStack(spacing: 0) {
             sidebar
-            Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     header
                     content
                 }
-                .padding(24)
+                .padding(28)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .buttonStyle(SettingsButtonStyle())
+            .background(SettingsPalette.background)
         }
         .frame(minWidth: 860, idealWidth: 980, minHeight: 680, idealHeight: 760)
         .onAppear {
@@ -72,9 +73,9 @@ struct SettingsView: View {
             HStack(spacing: 10) {
                 Image(systemName: "mic.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(SettingsPalette.ink)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("VoiceDock")
+                    Text("PasteVox")
                         .font(.headline)
                     Text("0.0.10")
                         .font(.caption)
@@ -97,7 +98,8 @@ struct SettingsView: View {
                     .padding(.horizontal, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
-                    .background(selectedSection == section ? Color.accentColor.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                    .background(selectedSection == section ? SettingsPalette.ink.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(selectedSection == section ? SettingsPalette.ink : SettingsPalette.muted)
                 }
                 .buttonStyle(.plain)
             }
@@ -110,14 +112,15 @@ struct SettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(18)
-        .frame(width: 210)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .frame(width: 220)
+        .background(SettingsPalette.surfaceSecondary)
+        .overlay(Rectangle().fill(SettingsPalette.line).frame(width: 1), alignment: .trailing)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(selectedSection.rawValue)
-                .font(.largeTitle.bold())
+                .font(.system(size: 34, weight: .semibold))
             Text(subtitle(for: selectedSection))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -147,6 +150,16 @@ struct SettingsView: View {
                     .labelsHidden()
                     .frame(width: 240)
                 }
+                settingRow("Writing style") {
+                    Picker("", selection: $settings.writingStyle) {
+                        ForEach(WritingStyle.allCases) { style in Text(style.title).tag(style) }
+                    }
+                    .labelsHidden()
+                    .frame(width: 220)
+                }
+                Text("Quick switch: Fn+1…4 changes mode, Fn+5…0 changes style: Default, Concise, Friendly, Formal, Coding Agent, Chat. Styles apply only when post-processing is enabled for the active mode; Raw stays raw.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 settingRow("OpenAI STT model") {
                     Picker("", selection: $settings.sttModel) {
                         ForEach(STTModel.allCases) { model in Text(model.rawValue).tag(model) }
@@ -164,17 +177,20 @@ struct SettingsView: View {
             }
 
             SettingsCard("Behavior") {
-                Toggle("Show VoiceDock in Dock", isOn: $settings.showInDock)
+                Toggle("Show PasteVox in Dock", isOn: $settings.showInDock)
                     .onChange(of: settings.showInDock) { _ in
                         NSApp.delegate.flatMap { $0 as? AppDelegate }?.applyActivationPolicy()
                     }
                 Toggle("Paste automatically", isOn: $settings.pasteAutomatically)
                 Toggle("App-aware mode switching", isOn: $settings.appAwareModeSwitchingEnabled)
                     .help("Experimental: Cursor/VS Code/Xcode → Agent, Terminal/iTerm → Command, chats/mail → Raw.")
+                    .onChange(of: settings.appAwareModeSwitchingEnabled) { _ in
+                        HotkeyManager.shared.restart()
+                    }
                 Toggle("Prefer speed over quality", isOn: $settings.preferSpeedOverQuality)
-                    .help("Uses file upload + gpt-4o-mini-transcribe + disables post-processing.")
+                    .help("Uses file upload + gpt-4o-mini-transcribe. Post-processing is controlled per mode below.")
                 Toggle("Sound feedback", isOn: $settings.soundFeedbackEnabled)
-                    .help("Uses short custom VoiceDock tones, not macOS system sounds.")
+                    .help("Uses short custom PasteVox tones, not macOS system sounds.")
                 Toggle("Haptic feedback", isOn: $settings.hapticFeedbackEnabled)
                     .help("Subtle haptic only on release/success/error; no haptic on recording start.")
                 Toggle("Keep last audio for debugging", isOn: $settings.keepLastAudioForDebugging)
@@ -185,7 +201,16 @@ struct SettingsView: View {
             }
 
             SettingsCard("Post-processing") {
-                Toggle("Enable post-processing", isOn: $settings.postProcessingEnabled)
+                Toggle("Enable post-processing globally", isOn: $settings.postProcessingEnabled)
+                Text("Choose which modes should be rewritten after transcription. Raw Dictation is normally left untouched.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(PromptMode.allCases) { mode in
+                        Toggle(mode.title, isOn: bindingForPostProcessingMode(mode))
+                            .disabled(mode == .rawDictation)
+                    }
+                }
                 settingRow("Model") {
                     Picker("", selection: $settings.postProcessingModel) {
                         ForEach(PostProcessingModel.allCases) { model in Text(model.rawValue).tag(model) }
@@ -256,7 +281,7 @@ struct SettingsView: View {
                     if hotkeyManager.lastProcessedText.hasPrefix("# RISKY_COMMAND_PREVIEW") {
                         Text("Blocked from auto-paste. Preview is shell-commented and safe to paste, but review manually.")
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(SettingsPalette.danger)
                     }
                     previewText(hotkeyManager.lastProcessedText, height: 130)
                 }
@@ -294,7 +319,7 @@ struct SettingsView: View {
             if !metricsCopyStatus.isEmpty {
                 Text(metricsCopyStatus)
                     .font(.caption)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(SettingsPalette.ink)
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -302,14 +327,15 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(metric.summary)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(metric.success ? .green : .red)
+                            .foregroundStyle(metric.success ? SettingsPalette.ink : SettingsPalette.danger)
                         Text("mode=\(metric.transcriptionMode?.title ?? "n/a")  model=\(metric.model ?? "n/a")  record=\(metric.recordingDurationMs.map(String.init) ?? "n/a")ms  audio=\(metric.audioFileSizeBytes.map(String.init) ?? "n/a")B  stt=\(metric.transcriptionDurationMs.map(String.init) ?? "n/a")ms  post=\(metric.postprocessDurationMs.map(String.init) ?? "n/a")ms  paste=\(metric.pasteDurationMs.map(String.init) ?? "n/a")ms")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    .background(SettingsPalette.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(SettingsPalette.line, lineWidth: 1))
                 }
             }
         }
@@ -343,7 +369,7 @@ struct SettingsView: View {
                 }
                 Text("File upload is recommended. Completed-recording stream is not true live microphone streaming. Realtime remains unstable for Russian/short phrases and falls back to file upload.")
                     .font(.caption)
-                    .foregroundStyle(settings.transcriptionMode == .fileUploadAfterRelease ? Color.secondary : Color.orange)
+                    .foregroundStyle(settings.transcriptionMode == .fileUploadAfterRelease ? SettingsPalette.muted : SettingsPalette.danger)
             }
 
             SettingsCard("Sample audio") {
@@ -403,8 +429,7 @@ struct SettingsView: View {
 
     private var openAISection: some View {
         SettingsCard("API Key") {
-            SecureField("OpenAI API key", text: $apiKeyInput)
-                .textFieldStyle(.roundedBorder)
+            SettingsSecureInputField("OpenAI API key", text: $apiKeyInput)
 
             HStack {
                 Button("Save API Key") { saveAPIKey() }
@@ -464,6 +489,19 @@ struct SettingsView: View {
         }
     }
 
+    private func bindingForPostProcessingMode(_ mode: PromptMode) -> Binding<Bool> {
+        Binding(
+            get: { settings.postProcessingEnabledModes.contains(mode) },
+            set: { enabled in
+                if enabled {
+                    settings.postProcessingEnabledModes.insert(mode)
+                } else {
+                    settings.postProcessingEnabledModes.remove(mode)
+                }
+            }
+        )
+    }
+
     private func settingRow<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .center) {
             Text(title)
@@ -490,7 +528,8 @@ struct SettingsView: View {
                 .padding(10)
         }
         .frame(height: height)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(SettingsPalette.surfaceSecondary, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(SettingsPalette.line, lineWidth: 1))
     }
 
     private func saveAPIKey() {
@@ -652,6 +691,7 @@ struct SettingsView: View {
         let result = try await PromptPostProcessor().process(
             text: text,
             mode: settings.promptMode,
+            style: settings.writingStyle,
             model: settings.postProcessingModel.rawValue,
             maxOutputTokens: settings.postProcessingMaxOutputTokens
         )
@@ -676,9 +716,107 @@ struct SettingsView: View {
 
     private func statusColor(_ status: String) -> Color {
         let lower = status.lowercased()
-        if lower.contains("success") || lower.contains("succeeded") || lower.contains("granted") || lower == "running" || lower == "yes" { return .green }
-        if lower.contains("error") || lower.contains("failed") || lower.contains("invalid") || lower.contains("missing") || lower.contains("denied") || lower.contains("risky") { return .red }
-        return .secondary
+        if lower.contains("success") || lower.contains("succeeded") || lower.contains("granted") || lower == "running" || lower == "yes" { return SettingsPalette.ink }
+        if lower.contains("error") || lower.contains("failed") || lower.contains("invalid") || lower.contains("missing") || lower.contains("denied") || lower.contains("risky") { return SettingsPalette.danger }
+        return SettingsPalette.muted
+    }
+}
+
+private enum SettingsPalette {
+    static let background = Color(red: 0.96, green: 0.96, blue: 0.95)
+    static let surface = Color.white
+    static let surfaceSecondary = Color(red: 0.95, green: 0.95, blue: 0.94)
+    static let ink = Color(red: 0.06, green: 0.06, blue: 0.06)
+    static let inkPressed = Color(red: 0.16, green: 0.16, blue: 0.16)
+    static let muted = Color(red: 0.40, green: 0.40, blue: 0.40)
+    static let line = Color.black.opacity(0.10)
+    static let lineStrong = Color.black.opacity(0.18)
+    static let control = Color(red: 0.91, green: 0.91, blue: 0.90)
+    static let controlPressed = Color(red: 0.86, green: 0.86, blue: 0.84)
+    static let danger = Color(red: 0.18, green: 0.18, blue: 0.18)
+}
+
+private struct SettingsButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12.5, weight: .semibold))
+            .foregroundStyle(SettingsPalette.ink)
+            .padding(.horizontal, 13)
+            .frame(height: 34)
+            .background(configuration.isPressed ? SettingsPalette.controlPressed : SettingsPalette.control, in: RoundedRectangle(cornerRadius: 11))
+            .overlay(RoundedRectangle(cornerRadius: 11).stroke(SettingsPalette.line, lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.86 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+private struct SettingsSecureInputField: View {
+    private let placeholder: String
+    @Binding private var text: String
+
+    init(_ placeholder: String, text: Binding<String>) {
+        self.placeholder = placeholder
+        self._text = text
+    }
+
+    var body: some View {
+        SettingsNativeSecureField(placeholder: placeholder, text: $text)
+            .padding(.horizontal, 12)
+            .frame(height: 36)
+            .background(SettingsPalette.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(SettingsPalette.line, lineWidth: 1))
+    }
+}
+
+private struct SettingsNativeSecureField: NSViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+
+    func makeNSView(context: Context) -> NSSecureTextField {
+        let field = NSSecureTextField(string: text)
+        field.delegate = context.coordinator
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.usesSingleLineMode = true
+        field.lineBreakMode = .byTruncatingTail
+        field.font = NSFont.systemFont(ofSize: 14, weight: .regular)
+        field.textColor = NSColor(calibratedWhite: 0.06, alpha: 1)
+        field.placeholderAttributedString = placeholderString(placeholder)
+        return field
+    }
+
+    func updateNSView(_ nsView: NSSecureTextField, context: Context) {
+        if nsView.stringValue != text { nsView.stringValue = text }
+        nsView.placeholderAttributedString = placeholderString(placeholder)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    private func placeholderString(_ value: String) -> NSAttributedString {
+        NSAttributedString(
+            string: value,
+            attributes: [
+                .foregroundColor: NSColor(calibratedWhite: 0.48, alpha: 1),
+                .font: NSFont.systemFont(ofSize: 14, weight: .regular)
+            ]
+        )
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        @Binding private var text: String
+
+        init(text: Binding<String>) {
+            self._text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            text = field.stringValue
+        }
     }
 }
 
@@ -693,16 +831,18 @@ private struct SettingsCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(SettingsPalette.muted)
+                .tracking(0.8)
             content
         }
-        .padding(16)
-        .frame(maxWidth: 680, alignment: .leading)
-        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+        .padding(18)
+        .frame(maxWidth: 700, alignment: .leading)
+        .background(SettingsPalette.surface, in: RoundedRectangle(cornerRadius: 16))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.secondary.opacity(0.16), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(SettingsPalette.line, lineWidth: 1)
         )
     }
 }

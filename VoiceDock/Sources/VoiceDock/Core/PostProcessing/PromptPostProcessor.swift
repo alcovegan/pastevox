@@ -20,7 +20,7 @@ final class PromptPostProcessor {
         self.session = session
     }
 
-    func process(text: String, mode: PromptMode, model: String, maxOutputTokens: Int) async throws -> PostProcessingResult {
+    func process(text: String, mode: PromptMode, style: WritingStyle, model: String, maxOutputTokens: Int) async throws -> PostProcessingResult {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PostProcessingError.emptyInput }
 
@@ -43,7 +43,7 @@ final class PromptPostProcessor {
             "temperature": 0,
             "max_tokens": maxOutputTokens,
             "messages": [
-                ["role": "system", "content": systemInstruction(for: mode)],
+                ["role": "system", "content": systemInstruction(for: mode, style: style)],
                 ["role": "user", "content": trimmed]
             ]
         ])
@@ -72,7 +72,8 @@ final class PromptPostProcessor {
         )
     }
 
-    private func systemInstruction(for mode: PromptMode) -> String {
+    private func systemInstruction(for mode: PromptMode, style: WritingStyle) -> String {
+        let styleInstruction = "\n\nСтиль вывода: \(style.instruction)"
         switch mode {
         case .rawDictation:
             return "Верни текст без изменений."
@@ -85,7 +86,7 @@ final class PromptPostProcessor {
             Убирай оговорки и мусор.
             Структурируй только если это помогает.
             Не превращай текст в email.
-            """
+            """ + styleInstruction
         case .ralphPrompt:
             return """
             Ты преобразуешь сырую расшифровку голоса в RALPH-промпт для coding agent.
@@ -100,7 +101,7 @@ final class PromptPostProcessor {
             - Stop points для ручной проверки
             Не выдумывай неизвестные детали.
             Если пользователь говорит грубо или хаотично, сохрани смысл, но сделай задачу исполнимой.
-            """
+            """ + styleInstruction
         case .terminalCommand:
             return """
             Ты преобразуешь речь в shell-команду или короткий набор команд.

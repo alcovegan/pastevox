@@ -1,6 +1,6 @@
-# VoiceDock
+# PasteVox
 
-VoiceDock — macOS menu bar app для голосового ввода промптов в coding agents.
+PasteVox — macOS menu bar app для голосового ввода промптов в coding agents.
 
 ## Version 0.0.9
 
@@ -64,10 +64,10 @@ GA websocket технически подключён и transcript events при
 
 ```bash
 cd VoiceDock
-swift run VoiceDock
+swift run PasteVox
 ```
 
-После запуска ищи waveform icon в menu bar. Settings: click icon → `Open Settings…`.
+После запуска ищи waveform icon в menu bar. Settings: click icon → `Settings`.
 
 ## Проверка
 
@@ -93,13 +93,13 @@ swift run VoiceDock
 ```bash
 cd VoiceDock
 ./scripts/build-app.sh
-open dist/VoiceDock.app
+open dist/PasteVox.app
 ```
 
 The script creates an ad-hoc signed local app bundle with generated `AppIcon.icns` at:
 
 ```text
-VoiceDock/dist/VoiceDock.app
+VoiceDock/dist/PasteVox.app
 ```
 
 ### Install to Applications
@@ -108,10 +108,10 @@ VoiceDock/dist/VoiceDock.app
 cd VoiceDock
 ./scripts/build-app.sh
 ./scripts/install-app.sh
-open /Applications/VoiceDock.app
+open /Applications/PasteVox.app
 ```
 
-Installing to `/Applications/VoiceDock.app` gives macOS Accessibility permissions a more stable app path than `dist/VoiceDock.app`.
+Installing to `/Applications/PasteVox.app` gives macOS Accessibility permissions a more stable app path than `dist/PasteVox.app`.
 
 ### Fn + number quick mode switch
 
@@ -136,7 +136,7 @@ Done:
 - separate Home window with History, Dictionary, Snippets and Scratchpad
 - snippet search, JSON import/export and record-test preview
 - optional app-aware mode switching
-- install script for `/Applications/VoiceDock.app`
+- install script for `/Applications/PasteVox.app`
 
 Still TODO:
 

@@ -1,4 +1,4 @@
-# VoiceDock Test Plan
+# PasteVox Test Plan
 
 ## 0.0.9 — HUD + menu bar polish
 
@@ -7,7 +7,7 @@
 - [ ] App starts without opening Settings automatically
 - [ ] Menu bar waveform icon is visible and sized consistently with nearby icons
 - [ ] Menu bar opens product menu
-- [ ] `Open Settings…` opens Settings
+- [ ] `Settings` opens Settings
 - [ ] Mode submenu switches prompt mode and checkmark updates
 - [ ] `Copy Last Result` works
 - [ ] `Paste Last Result` works
@@ -63,7 +63,7 @@
 
 - [x] Build `.app` via `./scripts/build-app.sh`
 - [x] Local ad-hoc signing
-- [ ] Launch `dist/VoiceDock.app` manually
+- [ ] Launch `dist/PasteVox.app` manually
 - [ ] Dock icon polish for packaged app
 - [ ] Fn+1 switches to Raw Dictation and shows HUD feedback
 - [ ] Fn+2 switches to Agent Prompt and shows HUD feedback

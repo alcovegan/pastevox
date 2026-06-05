@@ -3,12 +3,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "VoiceDock",
+    name: "PasteVox",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "VoiceDock", targets: ["VoiceDock"])
+        .executable(name: "PasteVox", targets: ["VoiceDock"])
     ],
     targets: [
         .executableTarget(

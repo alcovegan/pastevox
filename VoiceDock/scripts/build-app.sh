@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="VoiceDock"
+APP_NAME="PasteVox"
+PACKAGE_BINARY="PasteVox"
 BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/debug"
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$DIST_DIR/$APP_NAME.app"
@@ -18,10 +19,10 @@ mkdir -p "$DIST_DIR"
 rm -rf "$APP_DIR" "$ICONSET_DIR"
 
 cd "$ROOT_DIR"
-swift build
+swift build --product "$PACKAGE_BINARY"
 
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
-cp "$BUILD_DIR/$APP_NAME" "$MACOS_DIR/$APP_NAME"
+cp "$BUILD_DIR/$PACKAGE_BINARY" "$MACOS_DIR/$APP_NAME"
 chmod +x "$MACOS_DIR/$APP_NAME"
 cp "$INFO_PLIST_SRC" "$CONTENTS_DIR/Info.plist"
 cp "$APP_ICON_SRC" "$RESOURCES_DIR/AppIcon.png"
@@ -43,8 +44,8 @@ iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
 rm -rf "$ICONSET_DIR"
 
 # Copy SwiftPM resource bundle if present.
-if [ -d "$BUILD_DIR/${APP_NAME}_${APP_NAME}.bundle" ]; then
-  cp -R "$BUILD_DIR/${APP_NAME}_${APP_NAME}.bundle" "$RESOURCES_DIR/"
+if [ -d "$BUILD_DIR/${PACKAGE_BINARY}_${PACKAGE_BINARY}.bundle" ]; then
+  cp -R "$BUILD_DIR/${PACKAGE_BINARY}_${PACKAGE_BINARY}.bundle" "$RESOURCES_DIR/"
 fi
 
 # Local ad-hoc signing for easier launch outside Terminal.

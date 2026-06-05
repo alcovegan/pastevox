@@ -19,7 +19,7 @@ final class HomeWindowController {
 
         let hostingController = NSHostingController(rootView: HomeView())
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "VoiceDock"
+        window.title = "PasteVox"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
         window.setFrame(defaultFrame(), display: false)

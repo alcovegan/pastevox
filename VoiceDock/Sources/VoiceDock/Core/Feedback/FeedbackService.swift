@@ -50,7 +50,7 @@ final class FeedbackService {
 
     private func makeSound(_ feedbackSound: FeedbackSound) -> NSSound {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("voicedock-feedback-\(feedbackSound.rawValue).wav")
+            .appendingPathComponent("pastevox-feedback-\(feedbackSound.rawValue).wav")
         if !FileManager.default.fileExists(atPath: url.path) {
             try? makeWAVData(for: feedbackSound).write(to: url)
         }

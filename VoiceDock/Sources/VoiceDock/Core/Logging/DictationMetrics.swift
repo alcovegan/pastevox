@@ -55,7 +55,7 @@ final class MetricsStore: ObservableObject {
 
     func metricsReport() -> String {
         var lines: [String] = []
-        lines.append("VoiceDock metrics report")
+        lines.append("PasteVox metrics report")
         if let stats = totalReleaseToPasteStats() {
             lines.append("successful total_release_to_paste min/avg/max: \(stats.min)/\(stats.avg)/\(stats.max) ms")
         } else {

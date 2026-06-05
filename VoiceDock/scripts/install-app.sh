@@ -2,9 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="VoiceDock"
+APP_NAME="PasteVox"
+OLD_APP_NAME="VoiceDock"
 SRC_APP="$ROOT_DIR/dist/$APP_NAME.app"
 DEST_APP="/Applications/$APP_NAME.app"
+OLD_DEST_APP="/Applications/$OLD_APP_NAME.app"
 
 if [ ! -d "$SRC_APP" ]; then
   "$ROOT_DIR/scripts/build-app.sh"
@@ -14,8 +16,12 @@ if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
   pkill "$APP_NAME" || true
   sleep 0.5
 fi
+if pgrep -x "$OLD_APP_NAME" >/dev/null 2>&1; then
+  pkill "$OLD_APP_NAME" || true
+  sleep 0.5
+fi
 
-rm -rf "$DEST_APP"
+rm -rf "$DEST_APP" "$OLD_DEST_APP"
 cp -R "$SRC_APP" "$DEST_APP"
 codesign --force --deep --sign - "$DEST_APP" >/dev/null
 

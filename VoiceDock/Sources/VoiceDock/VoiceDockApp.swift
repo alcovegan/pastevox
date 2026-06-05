@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct VoiceDockApp: App {
+struct PasteVoxApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {

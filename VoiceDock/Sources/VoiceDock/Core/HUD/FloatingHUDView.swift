@@ -34,13 +34,15 @@ struct FloatingHUDView: View {
                 Text("Listening")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(textColor)
-                Text(AppSettings.shared.promptMode.shortTitle)
+                Text(controller.message == HUDState.listening.title ? AppSettings.shared.promptMode.shortTitle : controller.message)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(textColor.opacity(0.7))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
             }
-            .frame(width: 76, alignment: .leading)
+            .frame(width: 112, alignment: .leading)
             VoiceWaveformView(color: .cyan, levels: audioRecorder.waveformLevels)
-                .frame(width: 220, height: 24)
+                .frame(width: 184, height: 24)
         }
         .padding(.horizontal, 16)
         .frame(width: 380, height: 44)

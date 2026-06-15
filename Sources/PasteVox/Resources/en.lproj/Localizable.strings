@@ -1,5 +1,4 @@
-/* PasteVox localized strings — English base (auto-generated key catalog).
-   Key == English source string. Keep in sync with ru.lproj/Localizable.strings. */
+/* PasteVox localized strings — English base (auto-generated key catalog). */
 
 "%@, %d ms, %d bytes, peak %@" = "%@, %d ms, %d bytes, peak %@";
 "%@: n=%d, min/avg/max %d/%d/%d ms" = "%@: n=%d, min/avg/max %d/%d/%d ms";
@@ -22,6 +21,8 @@
 "Behavior" = "Behavior";
 "Best quality: file upload" = "Best quality: file upload";
 "Blocked from auto-paste. Preview is shell-commented and safe to paste, but review manually." = "Blocked from auto-paste. Preview is shell-commented and safe to paste, but review manually.";
+"Built-in" = "Built-in";
+"Built-in prompts use this language. Per-mode overrides below win over it." = "Built-in prompts use this language. Per-mode overrides below win over it.";
 "Cancel" = "Cancel";
 "Capture longer thoughts without auto-pasting. Save, copy or paste later." = "Capture longer thoughts without auto-pasting. Save, copy or paste later.";
 "Check Keychain" = "Check Keychain";
@@ -38,6 +39,7 @@
 "Copy Log Path" = "Copy Log Path";
 "Copy Metrics Report" = "Copy Metrics Report";
 "Create snippet" = "Create snippet";
+"Custom" = "Custom";
 "Debug HUD" = "Debug HUD";
 "Delete" = "Delete";
 "Delete Key" = "Delete Key";
@@ -48,6 +50,7 @@
 "Edit" = "Edit";
 "Edit note" = "Edit note";
 "Edit snippet" = "Edit snippet";
+"Edit the post-processing prompts and their language." = "Edit the post-processing prompts and their language.";
 "Editing note." = "Editing note.";
 "Editing snippet." = "Editing snippet.";
 "Enable post-processing globally" = "Enable post-processing globally";
@@ -131,6 +134,7 @@
 "Main dictation, paste and post-processing options." = "Main dictation, paste and post-processing options.";
 "Manual recording" = "Manual recording";
 "Manual recording, sample audio and HUD controls." = "Manual recording, sample audio and HUD controls.";
+"Match app language" = "Match app language";
 "Match system" = "Match system";
 "Matched" = "Matched";
 "Matched “%@” · %@ · %@" = "Matched “%@” · %@ · %@";
@@ -180,6 +184,7 @@
 "Post-processing" = "Post-processing";
 "Prefer speed over quality" = "Prefer speed over quality";
 "Pressed" = "Pressed";
+"Prompt language" = "Prompt language";
 "Prompt mode" = "Prompt mode";
 "Quit PasteVox" = "Quit PasteVox";
 "Ready" = "Ready";
@@ -198,6 +203,7 @@
 "Reset" = "Reset";
 "Reset App Settings" = "Reset App Settings";
 "Reset local app settings. OpenAI key is kept unless you delete it in OpenAI section." = "Reset local app settings. OpenAI key is kept unless you delete it in OpenAI section.";
+"Reset to default" = "Reset to default";
 "Restart Monitor" = "Restart Monitor";
 "Reusable voice shortcuts." = "Reusable voice shortcuts.";
 "Rewrite model" = "Rewrite model";
@@ -291,3 +297,4 @@
 "wpm n/a" = "wpm n/a";
 "yes" = "yes";
 "~%d wpm" = "~%d wpm";
+"Prompts" = "Prompts";

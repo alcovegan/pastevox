@@ -3,6 +3,7 @@ import SwiftUI
 
 private enum SettingsSection: String, CaseIterable, Identifiable {
     case workflow = "Workflow"
+    case prompts = "Prompts"
     case permissions = "Permissions"
     case hotkey = "Hotkey"
     case metrics = "Metrics"
@@ -14,6 +15,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .workflow: "slider.horizontal.3"
+        case .prompts: "text.bubble"
         case .permissions: "checkmark.shield"
         case .hotkey: "keyboard"
         case .metrics: "speedometer"
@@ -140,11 +142,59 @@ struct SettingsView: View {
     private var content: some View {
         switch selectedSection {
         case .workflow: workflowSection
+        case .prompts: promptsSection
         case .permissions: permissionsSection
         case .hotkey: hotkeySection
         case .metrics: metricsSection
         case .debug: debugSection
         case .openAI: openAISection
+        }
+    }
+
+    private func promptBinding(_ mode: PromptMode) -> Binding<String> {
+        Binding(
+            get: { settings.promptOverride(for: mode) ?? DefaultPrompts.modePrompt(mode, language: settings.resolvedPromptLanguage) },
+            set: { settings.setPromptOverride($0, for: mode) }
+        )
+    }
+
+    private var promptsSection: some View {
+        VStack(spacing: 14) {
+            SettingsCard(T("Prompt language")) {
+                settingRow(T("Language")) {
+                    Picker("", selection: $settings.promptLanguageMode) {
+                        ForEach(PromptLanguageMode.allCases) { mode in Text(mode.displayName).tag(mode) }
+                    }
+                    .labelsHidden()
+                    .frame(width: 220, alignment: .leading)
+                }
+                Text(T("Built-in prompts use this language. Per-mode overrides below win over it."))
+                    .font(.caption)
+                    .foregroundStyle(SettingsPalette.muted)
+            }
+
+            ForEach([PromptMode.agentPrompt, .ralphPrompt, .terminalCommand]) { mode in
+                SettingsCard(mode.title) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextEditor(text: promptBinding(mode))
+                            .font(.system(size: 12, design: .monospaced))
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 150)
+                            .padding(8)
+                            .background(SettingsPalette.background, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(SettingsPalette.line))
+                        HStack(spacing: 10) {
+                            Text(settings.hasPromptOverride(for: mode) ? T("Custom") : T("Built-in"))
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(SettingsPalette.muted)
+                            Spacer()
+                            Button(T("Reset to default")) { settings.resetPromptOverride(for: mode) }
+                                .buttonStyle(SettingsButtonStyle())
+                                .disabled(!settings.hasPromptOverride(for: mode))
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -534,6 +584,7 @@ struct SettingsView: View {
     private func subtitle(for section: SettingsSection) -> String {
         switch section {
         case .workflow: T("Main dictation, paste and post-processing options.")
+        case .prompts: T("Edit the post-processing prompts and their language.")
         case .permissions: T("Microphone and Accessibility permissions.")
         case .hotkey: T("Fn/Globe hold-to-record status and last outputs.")
         case .metrics: T("Latency for recent dictation sessions.")
@@ -911,7 +962,9 @@ struct SettingsView: View {
             mode: settings.promptMode,
             style: settings.writingStyle,
             model: settings.postProcessingModel.rawValue,
-            maxOutputTokens: settings.postProcessingMaxOutputTokens
+            maxOutputTokens: settings.postProcessingMaxOutputTokens,
+            language: settings.resolvedPromptLanguage,
+            override: settings.promptOverride(for: settings.promptMode)
         )
         return result.text
     }

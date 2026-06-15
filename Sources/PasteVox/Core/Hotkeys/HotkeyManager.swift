@@ -761,7 +761,9 @@ final class HotkeyManager: ObservableObject {
             mode: promptMode,
             style: settings.writingStyle,
             model: settings.postProcessingModel.rawValue,
-            maxOutputTokens: settings.postProcessingMaxOutputTokens
+            maxOutputTokens: settings.postProcessingMaxOutputTokens,
+            language: settings.resolvedPromptLanguage,
+            override: settings.promptOverride(for: promptMode)
         )
         statusMessage = "Post-processed in \(processed.durationMs) ms."
         return processed

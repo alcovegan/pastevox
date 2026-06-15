@@ -58,24 +58,6 @@ enum WritingStyle: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    var instruction: String {
-        switch self {
-        case .default:
-            "Сохраняй естественный стиль пользователя."
-        case .concise:
-            "Сделай результат кратким, плотным и без лишних слов."
-        case .friendly:
-            "Сделай тон дружелюбным, живым и понятным, без чрезмерной официальности."
-        case .formal:
-            "Сделай тон профессиональным, аккуратным и формальным."
-        case .codingAgent:
-            "Сформулируй как чёткую задачу для coding agent: цель, контекст, ограничения, критерии готовности."
-        case .chat:
-            "Сформулируй как короткое сообщение для чата/мессенджера."
-        case .email:
-            "Сформулируй как аккуратный email или email-фрагмент с уместным тоном."
-        }
-    }
 }
 
 enum STTModel: String, CaseIterable, Identifiable {
@@ -84,6 +66,22 @@ enum STTModel: String, CaseIterable, Identifiable {
     case whisper1 = "whisper-1"
 
     var id: String { rawValue }
+}
+
+enum PromptLanguageMode: String, CaseIterable, Identifiable, Codable {
+    case followApp
+    case en
+    case ru
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .followApp: return T("Match app language")
+        case .en: return "English"
+        case .ru: return "Русский"
+        }
+    }
 }
 
 @MainActor
@@ -191,6 +189,18 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var promptLanguageMode: PromptLanguageMode {
+        didSet { UserDefaults.standard.set(promptLanguageMode.rawValue, forKey: Keys.promptLanguageMode) }
+    }
+
+    @Published var promptOverrides: [String: String] {
+        didSet {
+            if let data = try? JSONEncoder().encode(promptOverrides) {
+                UserDefaults.standard.set(data, forKey: Keys.promptOverrides)
+            }
+        }
+    }
+
     private enum Keys {
         static let selectedHotkey = "selectedHotkey"
         static let holdHotkeyKind = "holdHotkeyKind"
@@ -214,6 +224,8 @@ final class AppSettings: ObservableObject {
         static let logPasteTargetWindowTitle = "logPasteTargetWindowTitle"
         static let appAwareModeSwitchingEnabled = "appAwareModeSwitchingEnabled"
         static let appLanguage = "appLanguage"
+        static let promptLanguageMode = "promptLanguageMode"
+        static let promptOverrides = "promptOverrides"
     }
 
     func resetToDefaults() {
@@ -239,6 +251,45 @@ final class AppSettings: ObservableObject {
         logPasteTargetWindowTitle = false
         appAwareModeSwitchingEnabled = false
         appLanguage = .system
+        promptLanguageMode = .followApp
+        promptOverrides = [:]
+    }
+
+    /// The language used for built-in (non-overridden) post-processing prompts.
+    var resolvedPromptLanguage: String {
+        switch promptLanguageMode {
+        case .followApp: return appLanguage.resolvedCode
+        case .en: return "en"
+        case .ru: return "ru"
+        }
+    }
+
+    /// Non-empty per-mode custom prompt, if the user set one (wins over the default).
+    func promptOverride(for mode: PromptMode) -> String? {
+        guard let value = promptOverrides[mode.rawValue],
+              !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return nil }
+        return value
+    }
+
+    func hasPromptOverride(for mode: PromptMode) -> Bool {
+        promptOverride(for: mode) != nil
+    }
+
+    /// Store an override; clears it if empty or identical to the current-language default.
+    func setPromptOverride(_ text: String, for mode: PromptMode) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let defaultPrompt = DefaultPrompts.modePrompt(mode, language: resolvedPromptLanguage)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == defaultPrompt {
+            promptOverrides[mode.rawValue] = nil
+        } else {
+            promptOverrides[mode.rawValue] = text
+        }
+    }
+
+    func resetPromptOverride(for mode: PromptMode) {
+        promptOverrides[mode.rawValue] = nil
     }
 
     private init() {
@@ -277,6 +328,14 @@ final class AppSettings: ObservableObject {
         appAwareModeSwitchingEnabled = UserDefaults.standard.object(forKey: Keys.appAwareModeSwitchingEnabled) as? Bool ?? false
         let appLanguageRaw = UserDefaults.standard.string(forKey: Keys.appLanguage) ?? AppLanguage.system.rawValue
         appLanguage = AppLanguage(rawValue: appLanguageRaw) ?? .system
+        let promptLangRaw = UserDefaults.standard.string(forKey: Keys.promptLanguageMode) ?? PromptLanguageMode.followApp.rawValue
+        promptLanguageMode = PromptLanguageMode(rawValue: promptLangRaw) ?? .followApp
+        if let data = UserDefaults.standard.data(forKey: Keys.promptOverrides),
+           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            promptOverrides = decoded
+        } else {
+            promptOverrides = [:]
+        }
         L10n.languageCode = appLanguage.resolvedCode
     }
 }

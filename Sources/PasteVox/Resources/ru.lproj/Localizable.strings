@@ -271,3 +271,11 @@
 "wpm n/a" = "слов/мин н/д";
 "yes" = "да";
 "~%d wpm" = "~%d слов/мин";
+"Prompts" = "Промпты";
+"Edit the post-processing prompts and their language." = "Редактируй промпты постобработки и их язык.";
+"Prompt language" = "Язык промптов";
+"Built-in prompts use this language. Per-mode overrides below win over it." = "Встроенные промпты используют этот язык. Оверрайды по режимам ниже его переопределяют.";
+"Built-in" = "Встроенный";
+"Custom" = "Свой";
+"Reset to default" = "Сбросить к стандартному";
+"Match app language" = "Как в приложении";

@@ -20,7 +20,7 @@ final class PromptPostProcessor {
         self.session = session
     }
 
-    func process(text: String, mode: PromptMode, style: WritingStyle, model: String, maxOutputTokens: Int) async throws -> PostProcessingResult {
+    func process(text: String, mode: PromptMode, style: WritingStyle, model: String, maxOutputTokens: Int, language: String, override: String?) async throws -> PostProcessingResult {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PostProcessingError.emptyInput }
 
@@ -43,7 +43,7 @@ final class PromptPostProcessor {
             "temperature": 0,
             "max_tokens": maxOutputTokens,
             "messages": [
-                ["role": "system", "content": systemInstruction(for: mode, style: style)],
+                ["role": "system", "content": systemInstruction(for: mode, style: style, language: language, override: override)],
                 ["role": "user", "content": trimmed]
             ]
         ])
@@ -72,46 +72,13 @@ final class PromptPostProcessor {
         )
     }
 
-    private func systemInstruction(for mode: PromptMode, style: WritingStyle) -> String {
-        let styleInstruction = "\n\nСтиль вывода: \(style.instruction)"
+    private func systemInstruction(for mode: PromptMode, style: WritingStyle, language: String, override: String?) -> String {
+        let base = override ?? DefaultPrompts.modePrompt(mode, language: language)
         switch mode {
-        case .rawDictation:
-            return "Верни текст без изменений."
-        case .agentPrompt:
-            return """
-            Ты преобразуешь сырую расшифровку голоса в чёткий промпт для coding agent.
-            Пиши на русском.
-            Не выдумывай факты.
-            Сохраняй технические термины, имена файлов, пути, команды, URL и версии.
-            Убирай оговорки и мусор.
-            Структурируй только если это помогает.
-            Не превращай текст в email.
-            """ + styleInstruction
-        case .ralphPrompt:
-            return """
-            Ты преобразуешь сырую расшифровку голоса в RALPH-промпт для coding agent.
-            Пиши на русском.
-            Структура:
-            - Роль
-            - Цель
-            - Контекст
-            - Ограничения
-            - Фазы
-            - Acceptance criteria
-            - Stop points для ручной проверки
-            Не выдумывай неизвестные детали.
-            Если пользователь говорит грубо или хаотично, сохрани смысл, но сделай задачу исполнимой.
-            """ + styleInstruction
-        case .terminalCommand:
-            return """
-            Ты преобразуешь речь в shell-команду или короткий набор команд.
-            Верни только команду без markdown, если команда безопасная.
-            Если команда может удалить данные, изменить систему, снести контейнеры/volumes, отправить секреты, поменять remote state или выполнить network/destructive action — не выдавай команду для автопаста.
-            Вместо этого верни ровно:
-            RISKY_COMMAND_PREVIEW
-            <команда>
-            <почему рискованно>
-            """
+        case .agentPrompt, .ralphPrompt:
+            return base + DefaultPrompts.styleSuffix(style, language: language)
+        default:
+            return base
         }
     }
 

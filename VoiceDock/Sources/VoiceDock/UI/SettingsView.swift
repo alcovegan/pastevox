@@ -86,7 +86,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PasteVox")
                         .font(.headline)
-                    Text("0.0.10")
+                    Text("0.1.0")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

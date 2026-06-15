@@ -2,7 +2,7 @@
 dist/
 .DS_Store
 *.xcuserdata
-Sources/VoiceDock/Resources/*.backup.png
+Sources/PasteVox/Resources/*.backup.png
 landing/.astro/
 landing/node_modules/
 landing/dist/

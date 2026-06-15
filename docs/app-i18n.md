@@ -9,10 +9,10 @@ SwiftPM-пакет (`swift build`, без Xcode-проекта). Локализ�
 **переключателем языка внутри приложения** (а не только системная локаль), потому что нужно
 переопределять язык независимо от системы.
 
-- **Каталоги строк:** `Sources/VoiceDock/Resources/<lang>.lproj/Localizable.strings`
+- **Каталоги строк:** `Sources/PasteVox/Resources/<lang>.lproj/Localizable.strings`
   (`en.lproj`, `ru.lproj`). Подключены в `Package.swift` через `defaultLocalization: "en"` +
   `.process(...)`. Ключ строки — это **сам английский исходный текст** (`"Save Snippet" = "…";`).
-- **Хелпер:** `Sources/VoiceDock/Core/Localization/Localization.swift`
+- **Хелпер:** `Sources/PasteVox/Core/Localization/Localization.swift`
   - `func T(_ key: String) -> String` — возвращает перевод для текущего языка; если перевода нет,
     отдаёт английский ключ (fallback). Использовать везде: `Text(T("Save Snippet"))`,
     `NSMenuItem(title: T("Quit PasteVox"), …)`, `String(format: T("Mode: %@"), x)`.
@@ -53,14 +53,14 @@ SwiftPM-пакет (`swift build`, без Xcode-проекта). Локализ�
 
 ## Как добавить новый язык (например, ES)
 
-1. Создай `Sources/VoiceDock/Resources/es.lproj/Localizable.strings`, добавь `.process(...)` в
+1. Создай `Sources/PasteVox/Resources/es.lproj/Localizable.strings`, добавь `.process(...)` в
    `Package.swift`.
 2. Добавь `case es` в `AppLanguage` (+ `displayName`, `resolvedCode`).
 3. Переведи каталог.
 
 ## Проверка
 
-- Юнит-тесты: `Tests/VoiceDockTests/LocalizationTests.swift` — грузят RU из бандла, проверяют
+- Юнит-тесты: `Tests/PasteVoxTests/LocalizationTests.swift` — грузят RU из бандла, проверяют
   fallback и целостность format-строк. Запуск: `swift test`.
 - Ручная проверка: запустить приложение, Settings → Поведение → Язык → **Русский** — UI, меню и
   HUD переключаются на лету.

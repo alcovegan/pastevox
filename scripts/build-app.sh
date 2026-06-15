@@ -10,9 +10,9 @@ APP_DIR="$DIST_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-INFO_PLIST_SRC="$ROOT_DIR/Sources/VoiceDock/Info.plist"
-APP_ICON_SRC="$ROOT_DIR/Sources/VoiceDock/Resources/AppIcon.png"
-MENU_ICON_SRC="$ROOT_DIR/Sources/VoiceDock/Resources/MenuBarIcon.png"
+INFO_PLIST_SRC="$ROOT_DIR/Sources/PasteVox/Info.plist"
+APP_ICON_SRC="$ROOT_DIR/Sources/PasteVox/Resources/AppIcon.png"
+MENU_ICON_SRC="$ROOT_DIR/Sources/PasteVox/Resources/MenuBarIcon.png"
 ICONSET_DIR="$DIST_DIR/AppIcon.iconset"
 
 mkdir -p "$DIST_DIR"
@@ -45,7 +45,7 @@ rm -rf "$ICONSET_DIR"
 
 # Copy SwiftPM resource bundle(s) into the app — contains app icons and the
 # localized .lproj catalogs (Bundle.module looks for them under Contents/Resources).
-# The bundle is named "<Package>_<Target>" (PasteVox_VoiceDock), so glob to stay robust.
+# The bundle is named "<Package>_<Target>" (PasteVox_PasteVox), so glob to stay robust.
 shopt -s nullglob
 for bundle in "$BUILD_DIR"/*.bundle; do
   cp -R "$bundle" "$RESOURCES_DIR/"

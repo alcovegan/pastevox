@@ -63,7 +63,6 @@ GA websocket технически подключён и transcript events при
 ## Запуск для разработки
 
 ```bash
-cd VoiceDock
 swift run PasteVox
 ```
 
@@ -91,7 +90,6 @@ swift run PasteVox
 ### Build `.app`
 
 ```bash
-cd VoiceDock
 ./scripts/build-app.sh
 open dist/PasteVox.app
 ```
@@ -105,7 +103,6 @@ dist/PasteVox.app
 ### Install to Applications
 
 ```bash
-cd VoiceDock
 ./scripts/build-app.sh
 ./scripts/install-app.sh
 open /Applications/PasteVox.app

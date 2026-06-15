@@ -9,12 +9,12 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "PasteVox", targets: ["VoiceDock"])
+        .executable(name: "PasteVox", targets: ["PasteVox"])
     ],
     targets: [
         .executableTarget(
-            name: "VoiceDock",
-            path: "Sources/VoiceDock",
+            name: "PasteVox",
+            path: "Sources/PasteVox",
             exclude: ["Info.plist", "Resources/MenuBarIcon.backup.png"],
             resources: [
                 .copy("Resources/AppIcon.png"),
@@ -27,14 +27,14 @@ let package = Package(
                     "-Xlinker", "-sectcreate",
                     "-Xlinker", "__TEXT",
                     "-Xlinker", "__info_plist",
-                    "-Xlinker", "Sources/VoiceDock/Info.plist"
+                    "-Xlinker", "Sources/PasteVox/Info.plist"
                 ])
             ]
         ),
         .testTarget(
-            name: "VoiceDockTests",
-            dependencies: ["VoiceDock"],
-            path: "Tests/VoiceDockTests"
+            name: "PasteVoxTests",
+            dependencies: ["PasteVox"],
+            path: "Tests/PasteVoxTests"
         )
     ]
 )

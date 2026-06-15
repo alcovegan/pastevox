@@ -1,5 +1,5 @@
 import XCTest
-@testable import VoiceDock
+@testable import PasteVox
 
 final class LocalizationTests: XCTestCase {
     override func tearDown() {

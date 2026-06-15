@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="PasteVox"
 PACKAGE_BINARY="PasteVox"
-BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/debug"
+CONFIG="${CONFIG:-debug}" # set CONFIG=release for distribution builds (CI)
+BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/$CONFIG"
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$DIST_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
@@ -19,7 +20,7 @@ mkdir -p "$DIST_DIR"
 rm -rf "$APP_DIR" "$ICONSET_DIR"
 
 cd "$ROOT_DIR"
-swift build --product "$PACKAGE_BINARY"
+swift build -c "$CONFIG" --product "$PACKAGE_BINARY"
 
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$BUILD_DIR/$PACKAGE_BINARY" "$MACOS_DIR/$APP_NAME"

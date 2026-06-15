@@ -1,0 +1,41 @@
+name: Release
+
+# Build and publish a macOS .app on every version tag (e.g. `git tag v0.1.0 && git push --tags`).
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14 # Apple Silicon runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Swift toolchain
+        run: swift --version
+
+      - name: Build packaged .app (release)
+        env:
+          CONFIG: release
+        run: ./scripts/build-app.sh
+
+      - name: Zip app bundle
+        run: |
+          cd dist
+          ditto -c -k --sequesterRsrc --keepParent PasteVox.app "PasteVox-${GITHUB_REF_NAME}-macos-arm64.zip"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PasteVox-*.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            Native macOS menu-bar voice utility — Apple Silicon build, ad-hoc signed (not notarized).
+
+            **Install:** unzip → move `PasteVox.app` to `/Applications` → on first launch right-click → **Open** (or run `xattr -dr com.apple.quarantine /Applications/PasteVox.app`). Then grant **Microphone** and **Accessibility** in System Settings → Privacy & Security.

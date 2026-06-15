@@ -43,10 +43,14 @@ sips -z 1024 1024 "$APP_ICON_SRC" --out "$ICONSET_DIR/icon_512x512@2x.png" >/dev
 iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
 rm -rf "$ICONSET_DIR"
 
-# Copy SwiftPM resource bundle if present.
-if [ -d "$BUILD_DIR/${PACKAGE_BINARY}_${PACKAGE_BINARY}.bundle" ]; then
-  cp -R "$BUILD_DIR/${PACKAGE_BINARY}_${PACKAGE_BINARY}.bundle" "$RESOURCES_DIR/"
-fi
+# Copy SwiftPM resource bundle(s) into the app — contains app icons and the
+# localized .lproj catalogs (Bundle.module looks for them under Contents/Resources).
+# The bundle is named "<Package>_<Target>" (PasteVox_VoiceDock), so glob to stay robust.
+shopt -s nullglob
+for bundle in "$BUILD_DIR"/*.bundle; do
+  cp -R "$bundle" "$RESOURCES_DIR/"
+done
+shopt -u nullglob
 
 # Local ad-hoc signing for easier launch outside Terminal.
 codesign --force --deep --sign - "$APP_DIR" >/dev/null

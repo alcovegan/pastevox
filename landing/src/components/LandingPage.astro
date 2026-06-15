@@ -31,7 +31,7 @@ const currentLanguage = languages.find((language) => language.code === t.lang) ?
             ))}
           </div>
         </details>
-        <a class="button primary" href="#download">{t.nav.download}</a>
+        <a class="button primary" href="https://github.com/alcovegan/pastevox/releases/latest" target="_blank" rel="noopener">{t.nav.download}</a>
       </div>
     </div>
   </nav>
@@ -42,7 +42,7 @@ const currentLanguage = languages.find((language) => language.code === t.lang) ?
       <h1>{t.hero.title.map((line) => <span>{line}</span>)}</h1>
       <p class="hero-copy">{t.hero.copy}</p>
       <div class="hero-actions">
-        <a class="button primary" href="../README.md">{t.hero.primary}</a>
+        <a class="button primary" href="https://github.com/alcovegan/pastevox" target="_blank" rel="noopener">{t.hero.primary}</a>
         <a class="button secondary" href="#setup">{t.hero.secondary}</a>
       </div>
       <div class="badges">
@@ -199,7 +199,7 @@ const currentLanguage = languages.find((language) => language.code === t.lang) ?
         <p class="section-copy">{t.setup.ctaCopy}</p>
       </div>
       <div class="cta-actions">
-        <a class="button primary" href="../README.md">{t.setup.build}</a>
+        <a class="button primary" href="https://github.com/alcovegan/pastevox" target="_blank" rel="noopener">{t.setup.build}</a>
         <a class="button secondary" href="#top">{t.setup.top}</a>
       </div>
     </div>
@@ -208,5 +208,6 @@ const currentLanguage = languages.find((language) => language.code === t.lang) ?
   <footer>
     <div>{t.footer[0]}</div>
     <div>{t.footer[1]}</div>
+    <div><a href="https://github.com/alcovegan/pastevox" target="_blank" rel="noopener">GitHub</a></div>
   </footer>
 </div>

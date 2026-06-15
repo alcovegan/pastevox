@@ -3,6 +3,7 @@ import SwiftUI
 struct FloatingHUDView: View {
     @ObservedObject var controller: FloatingHUDController
     @ObservedObject private var audioRecorder = AudioRecorder.shared
+    @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -31,7 +32,7 @@ struct FloatingHUDView: View {
         HStack(spacing: 12) {
             stateDot
             VStack(alignment: .leading, spacing: 1) {
-                Text("Listening")
+                Text(T("Listening"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(textColor)
                 Text(controller.message == HUDState.listening.title ? AppSettings.shared.promptMode.shortTitle : controller.message)
@@ -79,10 +80,10 @@ struct FloatingHUDView: View {
         switch controller.state {
         case .hidden: ""
         case .listening: ""
-        case .transcribing: "processing"
-        case .pasted: "done"
-        case .error: "check Settings"
-        case .modeChanged: "selected"
+        case .transcribing: T("processing")
+        case .pasted: T("done")
+        case .error: T("check Settings")
+        case .modeChanged: T("selected")
         }
     }
 

@@ -9,9 +9,9 @@ enum TranscriptionMode: String, CaseIterable, Identifiable, Codable {
 
     var title: String {
         switch self {
-        case .fileUploadAfterRelease: "Best quality: file upload"
-        case .streamingCompletedRecording: "Experimental: completed-recording stream"
-        case .realtimeMicrophoneStreaming: "Experimental: realtime microphone"
+        case .fileUploadAfterRelease: T("Best quality: file upload")
+        case .streamingCompletedRecording: T("Experimental: completed-recording stream")
+        case .realtimeMicrophoneStreaming: T("Experimental: realtime microphone")
         }
     }
 }
@@ -94,6 +94,13 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(selectedHotkey, forKey: Keys.selectedHotkey) }
     }
 
+    @Published var holdHotkeyKind: HotkeyKind {
+        didSet {
+            selectedHotkey = holdHotkeyKind.title
+            UserDefaults.standard.set(holdHotkeyKind.rawValue, forKey: Keys.holdHotkeyKind)
+        }
+    }
+
     @Published var promptMode: PromptMode {
         didSet { UserDefaults.standard.set(promptMode.rawValue, forKey: Keys.promptMode) }
     }
@@ -142,6 +149,10 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(showInDock, forKey: Keys.showInDock) }
     }
 
+    @Published var fnHoldToRecordEnabled: Bool {
+        didSet { UserDefaults.standard.set(fnHoldToRecordEnabled, forKey: Keys.fnHoldToRecordEnabled) }
+    }
+
     @Published var preferSpeedOverQuality: Bool {
         didSet {
             UserDefaults.standard.set(preferSpeedOverQuality, forKey: Keys.preferSpeedOverQuality)
@@ -172,8 +183,17 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(appAwareModeSwitchingEnabled, forKey: Keys.appAwareModeSwitchingEnabled) }
     }
 
+    @Published var appLanguage: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(appLanguage.rawValue, forKey: Keys.appLanguage)
+            L10n.languageCode = appLanguage.resolvedCode
+            NotificationCenter.default.post(name: .appLanguageChanged, object: nil)
+        }
+    }
+
     private enum Keys {
         static let selectedHotkey = "selectedHotkey"
+        static let holdHotkeyKind = "holdHotkeyKind"
         static let promptMode = "promptMode"
         static let writingStyle = "writingStyle"
         static let sttModel = "sttModel"
@@ -186,16 +206,19 @@ final class AppSettings: ObservableObject {
         static let postProcessingMaxOutputTokens = "postProcessingMaxOutputTokens"
         static let savedAPIKeyMask = "savedAPIKeyMask"
         static let showInDock = "showInDock"
+        static let fnHoldToRecordEnabled = "fnHoldToRecordEnabled"
         static let preferSpeedOverQuality = "preferSpeedOverQuality"
         static let soundFeedbackEnabled = "soundFeedbackEnabled"
         static let hapticFeedbackEnabled = "hapticFeedbackEnabled"
         static let logPasteTargetApp = "logPasteTargetApp"
         static let logPasteTargetWindowTitle = "logPasteTargetWindowTitle"
         static let appAwareModeSwitchingEnabled = "appAwareModeSwitchingEnabled"
+        static let appLanguage = "appLanguage"
     }
 
     func resetToDefaults() {
-        selectedHotkey = "Fn/Globe hold"
+        holdHotkeyKind = .fnHold
+        selectedHotkey = holdHotkeyKind.title
         promptMode = .rawDictation
         writingStyle = .default
         sttModel = .gpt4oMiniTranscribe
@@ -208,16 +231,21 @@ final class AppSettings: ObservableObject {
         postProcessingMaxOutputTokens = 1200
         savedAPIKeyMask = "Not checked"
         showInDock = false
+        fnHoldToRecordEnabled = true
         preferSpeedOverQuality = false
         soundFeedbackEnabled = true
         hapticFeedbackEnabled = true
         logPasteTargetApp = true
         logPasteTargetWindowTitle = false
         appAwareModeSwitchingEnabled = false
+        appLanguage = .system
     }
 
     private init() {
-        selectedHotkey = UserDefaults.standard.string(forKey: Keys.selectedHotkey) ?? "Fn/Globe hold"
+        let holdHotkeyRaw = UserDefaults.standard.string(forKey: Keys.holdHotkeyKind) ?? HotkeyKind.fnHold.rawValue
+        let resolvedHoldHotkeyKind = HotkeyKind(rawValue: holdHotkeyRaw) ?? .fnHold
+        holdHotkeyKind = resolvedHoldHotkeyKind
+        selectedHotkey = resolvedHoldHotkeyKind.title
         let promptModeRaw = UserDefaults.standard.string(forKey: Keys.promptMode) ?? PromptMode.rawDictation.rawValue
         promptMode = PromptMode(rawValue: promptModeRaw) ?? .rawDictation
         let styleRaw = UserDefaults.standard.string(forKey: Keys.writingStyle) ?? WritingStyle.default.rawValue
@@ -240,11 +268,15 @@ final class AppSettings: ObservableObject {
         postProcessingMaxOutputTokens = savedMaxTokens > 0 ? savedMaxTokens : 1200
         savedAPIKeyMask = UserDefaults.standard.string(forKey: Keys.savedAPIKeyMask) ?? "Not checked"
         showInDock = UserDefaults.standard.object(forKey: Keys.showInDock) as? Bool ?? false
+        fnHoldToRecordEnabled = UserDefaults.standard.object(forKey: Keys.fnHoldToRecordEnabled) as? Bool ?? true
         preferSpeedOverQuality = UserDefaults.standard.object(forKey: Keys.preferSpeedOverQuality) as? Bool ?? false
         soundFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.soundFeedbackEnabled) as? Bool ?? true
         hapticFeedbackEnabled = UserDefaults.standard.object(forKey: Keys.hapticFeedbackEnabled) as? Bool ?? true
         logPasteTargetApp = UserDefaults.standard.object(forKey: Keys.logPasteTargetApp) as? Bool ?? true
         logPasteTargetWindowTitle = UserDefaults.standard.object(forKey: Keys.logPasteTargetWindowTitle) as? Bool ?? false
         appAwareModeSwitchingEnabled = UserDefaults.standard.object(forKey: Keys.appAwareModeSwitchingEnabled) as? Bool ?? false
+        let appLanguageRaw = UserDefaults.standard.string(forKey: Keys.appLanguage) ?? AppLanguage.system.rawValue
+        appLanguage = AppLanguage(rawValue: appLanguageRaw) ?? .system
+        L10n.languageCode = appLanguage.resolvedCode
     }
 }

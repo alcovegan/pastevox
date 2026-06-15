@@ -13,12 +13,12 @@ enum HUDState: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .hidden: "Ready"
-        case .listening: "Listening"
-        case .transcribing: "Transcribing"
-        case .pasted: "Pasted"
-        case .error: "Error"
-        case .modeChanged: "Mode"
+        case .hidden: T("Ready")
+        case .listening: T("Listening")
+        case .transcribing: T("Transcribing")
+        case .pasted: T("Pasted")
+        case .error: T("Error")
+        case .modeChanged: T("Mode")
         }
     }
 
@@ -39,7 +39,7 @@ final class FloatingHUDController: ObservableObject {
     static let shared = FloatingHUDController()
 
     @Published var state: HUDState = .hidden
-    @Published var message: String = "Ready"
+    @Published var message: String = T("Ready")
 
     private let panelSize = NSSize(width: 420, height: 72)
     private var panel: NSPanel?

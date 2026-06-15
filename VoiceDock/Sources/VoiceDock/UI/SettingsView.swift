@@ -32,18 +32,27 @@ struct SettingsView: View {
 
     @State private var selectedSection: SettingsSection = .workflow
     @State private var apiKeyInput = ""
-    @State private var apiKeyStatus = "Keychain status unknown"
+    @State private var apiKeyStatus = T("Keychain status unknown")
     @State private var savedAPIKeyMask = AppSettings.shared.savedAPIKeyMask
-    @State private var testStatus = "Not tested"
-    @State private var transcriptionStatus = "No audio selected"
+    @State private var testStatus = T("Not tested")
+    @State private var transcriptionStatus = T("No audio selected")
     @State private var transcriptPreview = ""
     @State private var microphoneStatus = PermissionsManager.shared.microphonePermissionDescription()
     @State private var accessibilityStatus = PermissionsManager.shared.accessibilityPermissionDescription()
-    @State private var recordingTranscriptionStatus = "No recording transcribed yet"
+    @State private var recordingTranscriptionStatus = T("No recording transcribed yet")
     @State private var metricsCopyStatus = ""
     @State private var isBusy = false
 
     private let transcriber = OpenAIFileTranscriber()
+
+    private static let integerFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.allowsFloats = false
+        formatter.minimum = 256
+        formatter.maximum = 4000
+        return formatter
+    }()
 
     var body: some View {
         HStack(spacing: 0) {
@@ -62,7 +71,7 @@ struct SettingsView: View {
         .frame(minWidth: 860, idealWidth: 980, minHeight: 680, idealHeight: 760)
         .onAppear {
             savedAPIKeyMask = settings.savedAPIKeyMask
-            apiKeyStatus = "Keychain not checked on startup to avoid password prompts. Use Check Keychain or Test OpenAI."
+            apiKeyStatus = T("Keychain not checked on startup to avoid password prompts. Use Check Keychain or Test OpenAI.")
             refreshMicrophoneStatus()
             refreshAccessibilityStatus()
         }
@@ -91,7 +100,7 @@ struct SettingsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: section.icon)
                             .frame(width: 18)
-                        Text(section.rawValue)
+                        Text(T(section.rawValue))
                         Spacer(minLength: 0)
                     }
                     .padding(.vertical, 8)
@@ -106,7 +115,7 @@ struct SettingsView: View {
 
             Spacer()
 
-            Text("Fn/Globe → STT → post-process → paste")
+            Text(T("Fn/Globe → STT → post-process → paste"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -119,7 +128,7 @@ struct SettingsView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(selectedSection.rawValue)
+            Text(T(selectedSection.rawValue))
                 .font(.system(size: 34, weight: .semibold))
             Text(subtitle(for: selectedSection))
                 .font(.subheadline)
@@ -141,102 +150,146 @@ struct SettingsView: View {
 
     private var workflowSection: some View {
         VStack(spacing: 14) {
-            SettingsCard("Dictation") {
-                settingRow("Hotkey") { Text(settings.selectedHotkey).foregroundStyle(.secondary) }
-                settingRow("Prompt mode") {
-                    Picker("", selection: $settings.promptMode) {
-                        ForEach(PromptMode.allCases) { mode in Text(mode.title).tag(mode) }
+            SettingsCard(T("Dictation")) {
+                settingRow(T("Hold key")) {
+                    Picker("", selection: $settings.holdHotkeyKind) {
+                        ForEach(HotkeyKind.allCases) { kind in Text(kind.title).tag(kind) }
                     }
                     .labelsHidden()
-                    .frame(width: 240)
+                    .frame(width: 220, alignment: .leading)
                 }
-                settingRow("Writing style") {
-                    Picker("", selection: $settings.writingStyle) {
-                        ForEach(WritingStyle.allCases) { style in Text(style.title).tag(style) }
+
+                HStack(alignment: .top, spacing: 12) {
+                    workflowControlCard(T("Prompt mode"), subtitle: T("Fn+1…4")) {
+                        Picker("", selection: $settings.promptMode) {
+                            ForEach(PromptMode.allCases) { mode in Text(mode.title).tag(mode) }
+                        }
+                        .labelsHidden()
+                        .frame(width: 230)
                     }
-                    .labelsHidden()
-                    .frame(width: 220)
+                    workflowControlCard(T("Writing style"), subtitle: T("Fn+5…0, Fn+-")) {
+                        Picker("", selection: $settings.writingStyle) {
+                            ForEach(WritingStyle.allCases) { style in Text(style.title).tag(style) }
+                        }
+                        .labelsHidden()
+                        .frame(width: 210)
+                    }
                 }
-                Text("Quick switch: Fn+1…4 changes mode, Fn+5…0 changes style: Default, Concise, Friendly, Formal, Coding Agent, Chat. Styles apply only when post-processing is enabled for the active mode; Raw stays raw.")
+
+                HStack(spacing: 8) {
+                    shortcutChip(T("Fn+1 Raw"))
+                    shortcutChip(T("Fn+2 Agent"))
+                    shortcutChip(T("Fn+3 RALPH"))
+                    shortcutChip(T("Fn+4 Command"))
+                }
+                HStack(spacing: 8) {
+                    shortcutChip(T("Fn+5 Default"))
+                    shortcutChip(T("Fn+6 Concise"))
+                    shortcutChip(T("Fn+7 Friendly"))
+                    shortcutChip(T("Fn+8 Formal"))
+                    shortcutChip(T("Fn+9 Coding"))
+                    shortcutChip(T("Fn+0 Chat"))
+                    shortcutChip(T("Fn+- Email"))
+                }
+
+                Text(T("Styles apply only when post-processing is enabled for the active mode. Raw Dictation stays raw."))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-                settingRow("OpenAI STT model") {
+                    .foregroundStyle(SettingsPalette.muted)
+                    .padding(.top, 2)
+
+                Divider().padding(.vertical, 2)
+
+                settingRow(T("OpenAI STT model")) {
                     Picker("", selection: $settings.sttModel) {
                         ForEach(STTModel.allCases) { model in Text(model.rawValue).tag(model) }
                     }
                     .labelsHidden()
-                    .frame(width: 260)
+                    .fixedSize()
+                    .frame(width: 260, alignment: .leading)
                 }
-                settingRow("Transcription mode") {
-                    Text(TranscriptionMode.fileUploadAfterRelease.title)
-                        .foregroundStyle(.secondary)
+                settingRow(T("Transcription mode")) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(TranscriptionMode.fileUploadAfterRelease.title)
+                            .foregroundStyle(SettingsPalette.ink)
+                        Text(T("Recommended default. Experimental modes are hidden in Debug."))
+                            .font(.caption)
+                            .foregroundStyle(SettingsPalette.muted)
+                    }
                 }
-                Text("Recommended default. The experimental modes are hidden in Debug because they did not show a stable latency/quality win.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
-            SettingsCard("Behavior") {
-                Toggle("Show PasteVox in Dock", isOn: $settings.showInDock)
-                    .onChange(of: settings.showInDock) { _ in
-                        NSApp.delegate.flatMap { $0 as? AppDelegate }?.applyActivationPolicy()
+            SettingsCard(T("Behavior")) {
+                settingRow(T("Language")) {
+                    Picker("", selection: $settings.appLanguage) {
+                        ForEach(AppLanguage.allCases) { language in Text(language.displayName).tag(language) }
                     }
-                Toggle("Paste automatically", isOn: $settings.pasteAutomatically)
-                Toggle("App-aware mode switching", isOn: $settings.appAwareModeSwitchingEnabled)
-                    .help("Experimental: Cursor/VS Code/Xcode → Agent, Terminal/iTerm → Command, chats/mail → Raw.")
+                    .labelsHidden()
+                    .frame(width: 220, alignment: .leading)
+                }
+                Toggle(T("Show PasteVox in Dock"), isOn: $settings.showInDock)
+                Toggle(T("Hold-to-record enabled"), isOn: $settings.fnHoldToRecordEnabled)
+                    .help(T("Temporarily pause the hold recording trigger when using modifier keys for code navigation. Quick toggle: Fn+`."))
+                Toggle(T("Paste automatically"), isOn: $settings.pasteAutomatically)
+                Toggle(T("App-aware mode switching"), isOn: $settings.appAwareModeSwitchingEnabled)
+                    .help(T("Experimental: Cursor/VS Code/Xcode → Agent, Terminal/iTerm → Command, chats/mail → Raw."))
                     .onChange(of: settings.appAwareModeSwitchingEnabled) { _ in
                         HotkeyManager.shared.restart()
                     }
-                Toggle("Prefer speed over quality", isOn: $settings.preferSpeedOverQuality)
-                    .help("Uses file upload + gpt-4o-mini-transcribe. Post-processing is controlled per mode below.")
-                Toggle("Sound feedback", isOn: $settings.soundFeedbackEnabled)
-                    .help("Uses short custom PasteVox tones, not macOS system sounds.")
-                Toggle("Haptic feedback", isOn: $settings.hapticFeedbackEnabled)
-                    .help("Subtle haptic only on release/success/error; no haptic on recording start.")
-                Toggle("Keep last audio for debugging", isOn: $settings.keepLastAudioForDebugging)
-                Toggle("Log paste target app", isOn: $settings.logPasteTargetApp)
-                    .help("Stores target app name/bundle in local history for debugging and repeat paste.")
-                Toggle("Log target window title", isOn: $settings.logPasteTargetWindowTitle)
-                    .help("Optional and off by default. Requires Accessibility and may expose document/window names in local history.")
+                Toggle(T("Prefer speed over quality"), isOn: $settings.preferSpeedOverQuality)
+                    .help(T("Uses file upload + gpt-4o-mini-transcribe. Post-processing is controlled per mode below."))
+                Toggle(T("Sound feedback"), isOn: $settings.soundFeedbackEnabled)
+                    .help(T("Uses short custom PasteVox tones, not macOS system sounds."))
+                Toggle(T("Haptic feedback"), isOn: $settings.hapticFeedbackEnabled)
+                    .help(T("Subtle haptic only on release/success/error; no haptic on recording start."))
+                Toggle(T("Keep last audio for debugging"), isOn: $settings.keepLastAudioForDebugging)
+                Toggle(T("Log paste target app"), isOn: $settings.logPasteTargetApp)
+                    .help(T("Stores target app name/bundle in local history for debugging and repeat paste."))
+                Toggle(T("Log target window title"), isOn: $settings.logPasteTargetWindowTitle)
+                    .help(T("Optional and off by default. Requires Accessibility and may expose document/window names in local history."))
             }
 
-            SettingsCard("Post-processing") {
-                Toggle("Enable post-processing globally", isOn: $settings.postProcessingEnabled)
-                Text("Choose which modes should be rewritten after transcription. Raw Dictation is normally left untouched.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(PromptMode.allCases) { mode in
-                        Toggle(mode.title, isOn: bindingForPostProcessingMode(mode))
-                            .disabled(mode == .rawDictation)
+            SettingsCard(T("Post-processing")) {
+                HStack(alignment: .center, spacing: 10) {
+                    Toggle("", isOn: $settings.postProcessingEnabled)
+                        .labelsHidden()
+                        .toggleStyle(SettingsCheckboxToggleStyle())
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(T("Enable post-processing globally"))
+                            .font(.system(size: 15, weight: .semibold))
+                        Text(T("Then choose which modes are rewritten after transcription."))
+                            .font(.caption)
+                            .foregroundStyle(SettingsPalette.muted)
                     }
+                    Spacer()
+                    Text(settings.postProcessingEnabled ? T("Enabled") : T("Off"))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(SettingsPalette.muted)
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
+                        .background(SettingsPalette.surfaceSecondary, in: Capsule())
                 }
-                settingRow("Model") {
-                    Picker("", selection: $settings.postProcessingModel) {
-                        ForEach(PostProcessingModel.allCases) { model in Text(model.rawValue).tag(model) }
-                    }
-                    .labelsHidden()
-                    .frame(width: 180)
-                }
-                Stepper("Max output tokens: \(settings.postProcessingMaxOutputTokens)", value: $settings.postProcessingMaxOutputTokens, in: 256...4000, step: 128)
+
+                postProcessingModeGrid
+
+                postProcessingControls
             }
         }
     }
 
     private var permissionsSection: some View {
-        SettingsCard("System Permissions") {
-            statusLine("Microphone", microphoneStatus)
-            statusLine("Accessibility", accessibilityStatus)
+        SettingsCard(T("System Permissions")) {
+            statusLine(T("Microphone"), microphoneStatus)
+            statusLine(T("Accessibility"), accessibilityStatus)
 
             HStack {
-                Button("Request Microphone") { Task { await requestMicrophonePermission() } }
+                Button(T("Request Microphone")) { Task { await requestMicrophonePermission() } }
                     .disabled(isBusy)
-                Button("Request Accessibility") {
+                Button(T("Request Accessibility")) {
                     PermissionsManager.shared.openAccessibilityPrompt()
                     refreshAccessibilityStatus()
                 }
                 .disabled(isBusy)
-                Button("Refresh") {
+                Button(T("Refresh")) {
                     refreshMicrophoneStatus()
                     refreshAccessibilityStatus()
                 }
@@ -246,40 +299,40 @@ struct SettingsView: View {
 
     private var hotkeySection: some View {
         VStack(spacing: 14) {
-            SettingsCard("Hold-to-record") {
-                Text("Hold Fn/Globe to record. Release to transcribe and paste/copy.")
+            SettingsCard(T("Hold-to-record")) {
+                Text(T("Hold Fn/Globe to record. Release to transcribe and paste/copy."))
                     .foregroundStyle(.secondary)
 
                 HStack {
-                    Button(hotkeyManager.isRunning ? "Restart Monitor" : "Start Monitor") {
+                    Button(hotkeyManager.isRunning ? T("Restart Monitor") : T("Start Monitor")) {
                         hotkeyManager.stop()
                         hotkeyManager.start()
                     }
-                    Button("Stop Monitor") { hotkeyManager.stop() }
+                    Button(T("Stop Monitor")) { hotkeyManager.stop() }
                         .disabled(!hotkeyManager.isRunning)
                 }
 
                 HStack {
-                    Button("Copy Last Result") { hotkeyManager.copyLastResult() }
+                    Button(T("Copy Last Result")) { hotkeyManager.copyLastResult() }
                         .disabled(hotkeyManager.lastProcessedText.isEmpty)
-                    Button("Paste Last Result") { Task { await hotkeyManager.pasteLastResult() } }
+                    Button(T("Paste Last Result")) { Task { await hotkeyManager.pasteLastResult() } }
                         .disabled(hotkeyManager.lastProcessedText.isEmpty)
                 }
 
-                statusLine("Monitor", hotkeyManager.isRunning ? "running" : "stopped")
-                statusLine("Pressed", hotkeyManager.isPressed ? "yes" : "no")
-                statusLine("Status", hotkeyManager.statusMessage)
-                statusLine("Transcription", hotkeyManager.lastTranscriptionModeStatus)
-                statusLine("Paste", hotkeyManager.lastPasteStatus)
+                statusLine(T("Monitor"), hotkeyManager.isRunning ? T("running") : T("stopped"))
+                statusLine(T("Pressed"), hotkeyManager.isPressed ? T("yes") : T("no"))
+                statusLine(T("Status"), hotkeyManager.statusMessage)
+                statusLine(T("Transcription"), hotkeyManager.lastTranscriptionModeStatus)
+                statusLine(T("Paste"), hotkeyManager.lastPasteStatus)
                 if !hotkeyManager.lastError.isEmpty {
-                    statusLine("Last error", hotkeyManager.lastError)
+                    statusLine(T("Last error"), hotkeyManager.lastError)
                 }
             }
 
             if !hotkeyManager.lastProcessedText.isEmpty {
-                SettingsCard(hotkeyManager.lastProcessedText.hasPrefix("# RISKY_COMMAND_PREVIEW") ? "Risky command preview" : "Last final output") {
+                SettingsCard(hotkeyManager.lastProcessedText.hasPrefix("# RISKY_COMMAND_PREVIEW") ? T("Risky command preview") : T("Last final output")) {
                     if hotkeyManager.lastProcessedText.hasPrefix("# RISKY_COMMAND_PREVIEW") {
-                        Text("Blocked from auto-paste. Preview is shell-commented and safe to paste, but review manually.")
+                        Text(T("Blocked from auto-paste. Preview is shell-commented and safe to paste, but review manually."))
                             .font(.caption)
                             .foregroundStyle(SettingsPalette.danger)
                     }
@@ -288,7 +341,7 @@ struct SettingsView: View {
             }
 
             if !hotkeyManager.lastTranscript.isEmpty {
-                SettingsCard("Last raw transcript") {
+                SettingsCard(T("Last raw transcript")) {
                     previewText(hotkeyManager.lastTranscript, height: 90)
                 }
             }
@@ -296,22 +349,22 @@ struct SettingsView: View {
     }
 
     private var metricsSection: some View {
-        SettingsCard("Latency") {
+        SettingsCard(T("Latency")) {
             if let stats = metricsStore.totalReleaseToPasteStats() {
-                Text("successful total_release_to_paste min/avg/max: \(stats.min)/\(stats.avg)/\(stats.max) ms")
+                Text(String(format: T("successful total_release_to_paste min/avg/max: %d/%d/%d ms"), stats.min, stats.avg, stats.max))
                     .font(.headline)
             } else {
-                Text("No successful sessions yet.")
+                Text(T("No successful sessions yet."))
                     .foregroundStyle(.secondary)
             }
 
-            modeStatsBlock(title: "Total by mode", stats: metricsStore.totalStatsByTranscriptionMode())
-            modeStatsBlock(title: "STT by mode", stats: metricsStore.sttStatsByTranscriptionMode())
+            modeStatsBlock(title: T("Total by mode"), stats: metricsStore.totalStatsByTranscriptionMode())
+            modeStatsBlock(title: T("STT by mode"), stats: metricsStore.sttStatsByTranscriptionMode())
 
             HStack {
-                Button("Copy Metrics Report") { copyMetricsReport() }
+                Button(T("Copy Metrics Report")) { copyMetricsReport() }
                     .disabled(metricsStore.sessions.isEmpty)
-                Button("Clear Metrics") {
+                Button(T("Clear Metrics")) {
                     metricsStore.clear()
                     metricsCopyStatus = ""
                 }
@@ -343,83 +396,83 @@ struct SettingsView: View {
 
     private var debugSection: some View {
         VStack(spacing: 14) {
-            SettingsCard("Manual recording") {
+            SettingsCard(T("Manual recording")) {
                 HStack {
-                    Button("Start Recording") { Task { await startRecording() } }
+                    Button(T("Start Recording")) { Task { await startRecording() } }
                         .disabled(isBusy || audioRecorder.state == .recording)
-                    Button("Stop Recording") { stopRecording() }
+                    Button(T("Stop Recording")) { stopRecording() }
                         .disabled(audioRecorder.state != .recording)
-                    Button("Play Last") { playLastRecording() }
+                    Button(T("Play Last")) { playLastRecording() }
                         .disabled(audioRecorder.lastRecordingURL == nil || audioRecorder.state == .recording)
-                    Button("Transcribe Last") { Task { await transcribeLastRecording() } }
+                    Button(T("Transcribe Last")) { Task { await transcribeLastRecording() } }
                         .disabled(audioRecorder.lastRecordingURL == nil || audioRecorder.state == .recording || isBusy)
                 }
-                statusLine("Recorder", "\(audioRecorder.state.rawValue) — \(audioRecorder.statusMessage)")
-                statusLine("Last recording", lastRecordingDescription)
-                statusLine("Transcription", recordingTranscriptionStatus)
+                statusLine(T("Recorder"), "\(audioRecorder.state.rawValue) — \(audioRecorder.statusMessage)")
+                statusLine(T("Last recording"), lastRecordingDescription)
+                statusLine(T("Transcription"), recordingTranscriptionStatus)
             }
 
-            SettingsCard("Experimental transcription modes") {
-                settingRow("Mode") {
+            SettingsCard(T("Experimental transcription modes")) {
+                settingRow(T("Mode")) {
                     Picker("", selection: $settings.transcriptionMode) {
                         ForEach(TranscriptionMode.allCases) { mode in Text(mode.title).tag(mode) }
                     }
                     .labelsHidden()
                     .frame(width: 360)
                 }
-                Text("File upload is recommended. Completed-recording stream is not true live microphone streaming. Realtime remains unstable for Russian/short phrases and falls back to file upload.")
+                Text(T("File upload is recommended. Completed-recording stream is not true live microphone streaming. Realtime remains unstable for Russian/short phrases and falls back to file upload."))
                     .font(.caption)
                     .foregroundStyle(settings.transcriptionMode == .fileUploadAfterRelease ? SettingsPalette.muted : SettingsPalette.danger)
             }
 
-            SettingsCard("Sample audio") {
+            SettingsCard(T("Sample audio")) {
                 HStack {
-                    Button("Transcribe Sample Audio…") { Task { await transcribeSampleAudio() } }
+                    Button(T("Transcribe Sample Audio…")) { Task { await transcribeSampleAudio() } }
                         .disabled(isBusy)
                     if isBusy { ProgressView().controlSize(.small) }
                 }
-                statusLine("Status", transcriptionStatus)
+                statusLine(T("Status"), transcriptionStatus)
                 if !transcriptPreview.isEmpty { previewText(transcriptPreview, height: 130) }
             }
 
-            SettingsCard("HUD states") {
+            SettingsCard(T("HUD states")) {
                 HStack {
                     ForEach([HUDState.listening, .transcribing, .pasted, .error, .modeChanged]) { state in
                         Button(state.title) { hudController.show(state) }
                     }
-                    Button("Hide") { hudController.hide() }
+                    Button(T("Hide")) { hudController.hide() }
                 }
             }
 
-            SettingsCard("Feedback test") {
+            SettingsCard(T("Feedback test")) {
                 HStack {
-                    Button("Start Haptic") { FeedbackService.shared.recordingStarted() }
-                    Button("Release") { FeedbackService.shared.recordingEnded() }
-                    Button("Success") { FeedbackService.shared.success() }
-                    Button("Error") { FeedbackService.shared.error() }
+                    Button(T("Start Haptic")) { FeedbackService.shared.recordingStarted() }
+                    Button(T("Release")) { FeedbackService.shared.recordingEnded() }
+                    Button(T("Success")) { FeedbackService.shared.success() }
+                    Button(T("Error")) { FeedbackService.shared.error() }
                 }
-                Text("If sounds play but haptics do not, macOS/device may not expose haptic feedback to this app/session. Sounds remain independent.")
+                Text(T("If sounds play but haptics do not, macOS/device may not expose haptic feedback to this app/session. Sounds remain independent."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            SettingsCard("Logs") {
-                settingRow("Local log") {
+            SettingsCard(T("Logs")) {
+                settingRow(T("Local log")) {
                     Text(LocalLogger.shared.logFilePath())
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
                 }
-                Button("Copy Log Path") {
+                Button(T("Copy Log Path")) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(LocalLogger.shared.logFilePath(), forType: .string)
                 }
             }
 
-            SettingsCard("Reset") {
-                Text("Reset local app settings. OpenAI key is kept unless you delete it in OpenAI section.")
+            SettingsCard(T("Reset")) {
+                Text(T("Reset local app settings. OpenAI key is kept unless you delete it in OpenAI section."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button("Reset App Settings") {
+                Button(T("Reset App Settings")) {
                     settings.resetToDefaults()
                     NSApp.delegate.flatMap { $0 as? AppDelegate }?.applyActivationPolicy()
                 }
@@ -428,27 +481,27 @@ struct SettingsView: View {
     }
 
     private var openAISection: some View {
-        SettingsCard("API Key") {
-            SettingsSecureInputField("OpenAI API key", text: $apiKeyInput)
+        SettingsCard(T("API Key")) {
+            SettingsSecureInputField(T("OpenAI API key"), text: $apiKeyInput)
 
             HStack {
-                Button("Save API Key") { saveAPIKey() }
+                Button(T("Save API Key")) { saveAPIKey() }
                     .disabled(apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isBusy)
-                Button("Check Keychain") { refreshAPIKeyStatus() }
+                Button(T("Check Keychain")) { refreshAPIKeyStatus() }
                     .disabled(isBusy)
-                Button("Delete Key") { deleteAPIKey() }
+                Button(T("Delete Key")) { deleteAPIKey() }
                     .disabled(isBusy)
-                Button("Test OpenAI") { Task { await testOpenAI() } }
+                Button(T("Test OpenAI")) { Task { await testOpenAI() } }
                     .disabled(isBusy)
             }
 
-            settingRow("Saved key") {
+            settingRow(T("Saved key")) {
                 Text(savedAPIKeyMask)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
             }
-            statusLine("Keychain", apiKeyStatus)
-            statusLine("Test", testStatus)
+            statusLine(T("Keychain"), apiKeyStatus)
+            statusLine(T("Test"), testStatus)
         }
     }
 
@@ -462,7 +515,7 @@ struct SettingsView: View {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
                     ForEach(stats, id: \.mode) { stat in
-                        Text("\(stat.mode.title): n=\(stat.count), min/avg/max \(stat.min)/\(stat.avg)/\(stat.max) ms")
+                        Text(String(format: T("%@: n=%d, min/avg/max %d/%d/%d ms"), stat.mode.title, stat.count, stat.min, stat.avg, stat.max))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -475,17 +528,17 @@ struct SettingsView: View {
         let report = metricsStore.metricsReport()
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(report, forType: .string)
-        metricsCopyStatus = "Metrics report copied to clipboard."
+        metricsCopyStatus = T("Metrics report copied to clipboard.")
     }
 
     private func subtitle(for section: SettingsSection) -> String {
         switch section {
-        case .workflow: "Main dictation, paste and post-processing options."
-        case .permissions: "Microphone and Accessibility permissions."
-        case .hotkey: "Fn/Globe hold-to-record status and last outputs."
-        case .metrics: "Latency for recent dictation sessions."
-        case .debug: "Manual recording, sample audio and HUD controls."
-        case .openAI: "API key storage and connection test."
+        case .workflow: T("Main dictation, paste and post-processing options.")
+        case .permissions: T("Microphone and Accessibility permissions.")
+        case .hotkey: T("Fn/Globe hold-to-record status and last outputs.")
+        case .metrics: T("Latency for recent dictation sessions.")
+        case .debug: T("Manual recording, sample audio and HUD controls.")
+        case .openAI: T("API key storage and connection test.")
         }
     }
 
@@ -500,6 +553,164 @@ struct SettingsView: View {
                 }
             }
         )
+    }
+
+    private func workflowControlCard<Content: View>(_ title: String, subtitle: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title.uppercased())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(SettingsPalette.muted)
+                    .tracking(0.8)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(SettingsPalette.muted)
+            }
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SettingsPalette.surfaceSecondary, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(SettingsPalette.line, lineWidth: 1))
+    }
+
+    private func shortcutChip(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .foregroundStyle(SettingsPalette.ink)
+            .padding(.horizontal, 8)
+            .frame(height: 24)
+            .background(SettingsPalette.control, in: Capsule())
+            .overlay(Capsule().stroke(SettingsPalette.line, lineWidth: 1))
+    }
+
+    private var postProcessingModeGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], alignment: .leading, spacing: 10) {
+            ForEach(PromptMode.allCases) { mode in
+                postProcessingModeCard(mode)
+            }
+        }
+    }
+
+    private func postProcessingModeCard(_ mode: PromptMode) -> some View {
+        let isRaw = mode == .rawDictation
+        return HStack(alignment: .top, spacing: 10) {
+            Toggle("", isOn: bindingForPostProcessingMode(mode))
+                .labelsHidden()
+                .toggleStyle(SettingsCheckboxToggleStyle())
+                .disabled(isRaw)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(mode.title)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(isRaw ? SettingsPalette.faint : SettingsPalette.ink)
+                Text(postProcessingDescription(for: mode))
+                    .font(.caption)
+                    .foregroundStyle(isRaw ? SettingsPalette.faint : SettingsPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+        .background(SettingsPalette.surfaceSecondary.opacity(isRaw ? 0.55 : 1), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(SettingsPalette.line, lineWidth: 1))
+    }
+
+    private func postProcessingDescription(for mode: PromptMode) -> String {
+        switch mode {
+        case .rawDictation: T("Left untouched so raw transcription stays raw.")
+        case .agentPrompt: T("Rewrite rough speech into a coding-agent task.")
+        case .ralphPrompt: T("Structure output as role, goal, context and criteria.")
+        case .terminalCommand: T("Generate commands with a safety gate for risky output.")
+        }
+    }
+
+    private var postProcessingControls: some View {
+        VStack(spacing: 0) {
+            inlineControlRow(T("Rewrite model"), subtitle: T("Used only after transcription")) {
+                Picker("", selection: $settings.postProcessingModel) {
+                    ForEach(PostProcessingModel.allCases) { model in Text(model.rawValue).tag(model) }
+                }
+                .labelsHidden()
+                .frame(width: 180, alignment: .leading)
+            }
+
+            Divider().padding(.leading, 170)
+
+            inlineControlRow(T("Max output tokens"), subtitle: T("256–4000")) {
+                HStack(spacing: 0) {
+                    tokenStepButton("−", delta: -100)
+                    Rectangle()
+                        .fill(SettingsPalette.line)
+                        .frame(width: 1, height: 22)
+                    TextField("1200", value: tokenLimitBinding, formatter: Self.integerFormatter)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        .multilineTextAlignment(.center)
+                        .frame(width: 90, height: 34)
+                    Rectangle()
+                        .fill(SettingsPalette.line)
+                        .frame(width: 1, height: 22)
+                    tokenStepButton("+", delta: 100)
+                }
+                .frame(width: 180, height: 34)
+                .background(SettingsPalette.surface, in: RoundedRectangle(cornerRadius: 11))
+                .overlay(RoundedRectangle(cornerRadius: 11).stroke(SettingsPalette.line, lineWidth: 1))
+            }
+        }
+        .padding(.vertical, 4)
+        .background(SettingsPalette.surfaceSecondary, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(SettingsPalette.line, lineWidth: 1))
+    }
+
+    private func inlineControlRow<Content: View>(_ title: String, subtitle: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(SettingsPalette.ink)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(SettingsPalette.muted)
+            }
+            .frame(width: 154, alignment: .leading)
+
+            content()
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private func tokenStepButton(_ title: String, delta: Int) -> some View {
+        Button {
+            adjustTokenLimit(by: delta)
+        } label: {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                .foregroundStyle(SettingsPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 44, height: 34)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tokenLimitBinding: Binding<Int> {
+        Binding(
+            get: { settings.postProcessingMaxOutputTokens },
+            set: { settings.postProcessingMaxOutputTokens = clampedTokenLimit($0) }
+        )
+    }
+
+    private func adjustTokenLimit(by delta: Int) {
+        settings.postProcessingMaxOutputTokens = clampedTokenLimit(settings.postProcessingMaxOutputTokens + delta)
+    }
+
+    private func clampedTokenLimit(_ value: Int) -> Int {
+        min(4000, max(256, value))
     }
 
     private func settingRow<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -539,10 +750,10 @@ struct SettingsView: View {
             apiKeyInput = ""
             savedAPIKeyMask = maskedKey(key)
             settings.savedAPIKeyMask = savedAPIKeyMask
-            apiKeyStatus = "API key saved in Keychain."
-            testStatus = "Not tested"
+            apiKeyStatus = T("API key saved in Keychain.")
+            testStatus = T("Not tested")
         } catch {
-            apiKeyStatus = "Failed to save API key: \(error.localizedDescription)"
+            apiKeyStatus = String(format: T("Failed to save API key: %@"), error.localizedDescription)
         }
     }
 
@@ -550,12 +761,12 @@ struct SettingsView: View {
         do {
             try KeychainStore.shared.deleteOpenAIAPIKey()
             apiKeyInput = ""
-            savedAPIKeyMask = "Not saved"
+            savedAPIKeyMask = T("Not saved")
             settings.savedAPIKeyMask = savedAPIKeyMask
-            apiKeyStatus = "API key deleted from Keychain."
-            testStatus = "Not tested"
+            apiKeyStatus = T("API key deleted from Keychain.")
+            testStatus = T("Not tested")
         } catch {
-            apiKeyStatus = "Failed to delete API key: \(error.localizedDescription)"
+            apiKeyStatus = String(format: T("Failed to delete API key: %@"), error.localizedDescription)
         }
     }
 
@@ -564,24 +775,24 @@ struct SettingsView: View {
             if let key = try KeychainStore.shared.loadOpenAIAPIKey(), !key.isEmpty {
                 savedAPIKeyMask = maskedKey(key)
                 settings.savedAPIKeyMask = savedAPIKeyMask
-                apiKeyStatus = "API key is saved in Keychain."
+                apiKeyStatus = T("API key is saved in Keychain.")
             } else {
-                savedAPIKeyMask = "Not saved"
+                savedAPIKeyMask = T("Not saved")
                 settings.savedAPIKeyMask = savedAPIKeyMask
-                apiKeyStatus = "No API key saved."
+                apiKeyStatus = T("No API key saved.")
             }
         } catch {
-            apiKeyStatus = "Failed to read Keychain: \(error.localizedDescription)"
+            apiKeyStatus = String(format: T("Failed to read Keychain: %@"), error.localizedDescription)
         }
     }
 
     private func testOpenAI() async {
         isBusy = true
-        testStatus = "Testing OpenAI…"
+        testStatus = T("Testing OpenAI…")
         defer { isBusy = false }
         do {
             try await transcriber.testAPIKey()
-            testStatus = "OpenAI test succeeded."
+            testStatus = T("OpenAI test succeeded.")
             refreshAPIKeyStatus()
         } catch {
             testStatus = error.localizedDescription
@@ -589,8 +800,15 @@ struct SettingsView: View {
     }
 
     private var lastRecordingDescription: String {
-        guard let url = audioRecorder.lastRecordingURL else { return "none" }
-        return "\(url.lastPathComponent), \(audioRecorder.lastRecordingDurationMs) ms, \(audioRecorder.lastRecordingSizeBytes) bytes, peak \(String(format: "%.2f", audioRecorder.lastRecordingPeakLevel))"
+        guard let url = audioRecorder.lastRecordingURL else { return T("none") }
+        let peak = String(format: "%.2f", audioRecorder.lastRecordingPeakLevel)
+        return String(
+            format: T("%@, %d ms, %d bytes, peak %@"),
+            url.lastPathComponent,
+            audioRecorder.lastRecordingDurationMs,
+            audioRecorder.lastRecordingSizeBytes,
+            peak
+        )
     }
 
     private func requestMicrophonePermission() async {
@@ -610,7 +828,7 @@ struct SettingsView: View {
 
     private func startRecording() async {
         do {
-            recordingTranscriptionStatus = "No recording transcribed yet"
+            recordingTranscriptionStatus = T("No recording transcribed yet")
             transcriptPreview = ""
             try await audioRecorder.startRecording()
             refreshMicrophoneStatus()
@@ -648,7 +866,7 @@ struct SettingsView: View {
 
         isBusy = true
         transcriptPreview = ""
-        recordingTranscriptionStatus = "Transcribing last recording…"
+        recordingTranscriptionStatus = T("Transcribing last recording…")
         hudController.show(.transcribing)
         defer { isBusy = false }
 
@@ -656,7 +874,7 @@ struct SettingsView: View {
             let context = TranscriptionContext(promptMode: settings.promptMode, model: settings.sttModel.rawValue)
             let result = try await transcriber.transcribe(audioURL: url, context: context)
             transcriptPreview = try await processForPreview(result.text)
-            recordingTranscriptionStatus = "Success: \(result.durationMs) ms, model: \(result.model)"
+            recordingTranscriptionStatus = String(format: T("Success: %d ms, model: %@"), result.durationMs, result.model)
             audioRecorder.deleteLastRecordingIfNeeded(keepForDebugging: settings.keepLastAudioForDebugging)
             hudController.show(.pasted)
         } catch {
@@ -670,7 +888,7 @@ struct SettingsView: View {
 
         isBusy = true
         transcriptPreview = ""
-        transcriptionStatus = "Transcribing \(url.lastPathComponent)…"
+        transcriptionStatus = String(format: T("Transcribing %@…"), url.lastPathComponent)
         hudController.show(.transcribing)
         defer { isBusy = false }
 
@@ -678,7 +896,7 @@ struct SettingsView: View {
             let context = TranscriptionContext(promptMode: settings.promptMode, model: settings.sttModel.rawValue)
             let result = try await transcriber.transcribe(audioURL: url, context: context)
             transcriptPreview = try await processForPreview(result.text)
-            transcriptionStatus = "Success: \(result.durationMs) ms, model: \(result.model)"
+            transcriptionStatus = String(format: T("Success: %d ms, model: %@"), result.durationMs, result.model)
             hudController.show(.pasted)
         } catch {
             transcriptionStatus = error.localizedDescription
@@ -701,7 +919,7 @@ struct SettingsView: View {
     @MainActor
     private func openAudioFilePanel() -> URL? {
         let panel = NSOpenPanel()
-        panel.title = "Choose sample audio"
+        panel.title = T("Choose sample audio")
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -716,7 +934,13 @@ struct SettingsView: View {
 
     private func statusColor(_ status: String) -> Color {
         let lower = status.lowercased()
-        if lower.contains("success") || lower.contains("succeeded") || lower.contains("granted") || lower == "running" || lower == "yes" { return SettingsPalette.ink }
+        // Short status tokens are localized, so match both the English keys and the
+        // current-language translations so tinting stays correct in any locale.
+        let positiveTokens: Set<String> = ["running", "yes", T("running").lowercased(), T("yes").lowercased()]
+        let neutralTokens: Set<String> = ["stopped", "no", T("stopped").lowercased(), T("no").lowercased()]
+        if positiveTokens.contains(lower) { return SettingsPalette.ink }
+        if neutralTokens.contains(lower) { return SettingsPalette.muted }
+        if lower.contains("success") || lower.contains("succeeded") || lower.contains("granted") { return SettingsPalette.ink }
         if lower.contains("error") || lower.contains("failed") || lower.contains("invalid") || lower.contains("missing") || lower.contains("denied") || lower.contains("risky") { return SettingsPalette.danger }
         return SettingsPalette.muted
     }
@@ -729,6 +953,7 @@ private enum SettingsPalette {
     static let ink = Color(red: 0.06, green: 0.06, blue: 0.06)
     static let inkPressed = Color(red: 0.16, green: 0.16, blue: 0.16)
     static let muted = Color(red: 0.40, green: 0.40, blue: 0.40)
+    static let faint = Color(red: 0.70, green: 0.70, blue: 0.68)
     static let line = Color.black.opacity(0.10)
     static let lineStrong = Color.black.opacity(0.18)
     static let control = Color(red: 0.91, green: 0.91, blue: 0.90)
@@ -747,6 +972,32 @@ private struct SettingsButtonStyle: ButtonStyle {
             .overlay(RoundedRectangle(cornerRadius: 11).stroke(SettingsPalette.line, lineWidth: 1))
             .opacity(configuration.isPressed ? 0.86 : 1)
             .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+private struct SettingsCheckboxToggleStyle: ToggleStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(configuration.isOn ? SettingsPalette.ink : SettingsPalette.control)
+                .frame(width: 22, height: 22)
+                .overlay(
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .opacity(configuration.isOn ? 1 : 0)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(SettingsPalette.line, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.38)
     }
 }
 

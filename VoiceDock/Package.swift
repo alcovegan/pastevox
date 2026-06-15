@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "PasteVox",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
@@ -17,7 +18,9 @@ let package = Package(
             exclude: ["Info.plist", "Resources/MenuBarIcon.backup.png"],
             resources: [
                 .copy("Resources/AppIcon.png"),
-                .copy("Resources/MenuBarIcon.png")
+                .copy("Resources/MenuBarIcon.png"),
+                .process("Resources/en.lproj/Localizable.strings"),
+                .process("Resources/ru.lproj/Localizable.strings")
             ],
             linkerSettings: [
                 .unsafeFlags([

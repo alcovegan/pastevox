@@ -7,7 +7,7 @@ PasteVox — macOS menu bar app для голосового ввода пром�
 Текущий стабильный MVP-flow:
 
 ```text
-Fn/Globe hold → microphone recording → OpenAI STT → optional post-processing → paste/copy
+Fn/Globe, Right Option or Right Command hold → microphone recording → OpenAI STT → optional post-processing → paste/copy
 ```
 
 ## Что работает
@@ -15,7 +15,7 @@ Fn/Globe hold → microphone recording → OpenAI STT → optional post-processi
 - App запускается как tray/menu bar приложение.
 - Settings не открываются на старте, только через menu bar.
 - Menu bar icon — компактная waveform template icon.
-- Fn/Globe hold-to-record работает.
+- Hold-to-record работает через Fn/Globe, Right Option или Right Command.
 - OpenAI API key хранится в macOS Keychain.
 - File upload transcription — recommended/default path.
 - Prompt modes:
@@ -113,16 +113,38 @@ open /Applications/PasteVox.app
 
 Installing to `/Applications/PasteVox.app` gives macOS Accessibility permissions a more stable app path than `dist/PasteVox.app`.
 
-### Fn + number quick mode switch
+### Hold key quick switches
 
-While holding Fn/Globe, press:
+While holding Fn/Globe or the selected hold key, press:
 
 - `1` → Raw Dictation
 - `2` → Agent Prompt
 - `3` → RALPH Prompt
 - `4` → Terminal Command
+- `5…0` / `-` → Writing style
+- `` ` `` → pause/resume hold-to-record
 
-HUD shows the selected mode and collapses automatically. Mode switching during Fn hold cancels the temporary recording instead of transcribing it.
+HUD shows the selected mode/style and collapses automatically. Mode/style switching during hold cancels the temporary recording instead of transcribing it.
+
+## Landing page
+
+Landing page source lives in `landing/` and is built with Astro. It has English and Russian static routes:
+
+```bash
+cd VoiceDock/landing
+npm install
+npm run dev
+npm run build
+npm run validate:i18n
+```
+
+Routes:
+
+- `/` — English
+- `/ru/` — Russian
+- `/es/` — Spanish
+- `/fr/` — French
+- `/de/` — German
 
 ## 0.0.10 status
 

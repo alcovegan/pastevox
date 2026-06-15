@@ -21,6 +21,7 @@ final class HotkeyManager: ObservableObject {
     private var localMonitor: Any?
     private var keyEventTap: CFMachPort?
     private var keyEventTapRunLoopSource: CFRunLoopSource?
+    private var hotkeyHealthTask: Task<Void, Never>?
     private var maxRecordingTask: Task<Void, Never>?
     private let transcriber = OpenAIFileTranscriber()
     private let realtimeTranscriber = OpenAIRealtimeTranscriber()
@@ -73,9 +74,12 @@ final class HotkeyManager: ObservableObject {
         }
 
         installKeyEventTap()
+        startHotkeyHealthWatchdog()
 
         isRunning = true
-        statusMessage = "Hotkey monitor running: hold Fn/Globe to record."
+        statusMessage = AppSettings.shared.fnHoldToRecordEnabled
+            ? "Hotkey monitor running: hold \(AppSettings.shared.holdHotkeyKind.shortTitle) to record."
+            : "Hold-to-record paused. Press Fn+` to resume."
         LocalLogger.shared.info("Hotkey monitor started kind=fnHold")
     }
 
@@ -105,6 +109,8 @@ final class HotkeyManager: ObservableObject {
         localMonitor = nil
         keyEventTap = nil
         keyEventTapRunLoopSource = nil
+        hotkeyHealthTask?.cancel()
+        hotkeyHealthTask = nil
         maxRecordingTask?.cancel()
         maxRecordingTask = nil
         isRunning = false
@@ -118,7 +124,10 @@ final class HotkeyManager: ObservableObject {
 
     private func installKeyEventTap() {
         guard keyEventTap == nil else { return }
-        let eventMask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        let eventMask = CGEventMask(
+            (1 << CGEventType.keyDown.rawValue) |
+            (1 << CGEventType.flagsChanged.rawValue)
+        )
         let userInfo = Unmanaged.passUnretained(self).toOpaque()
 
         guard let tap = CGEvent.tapCreate(
@@ -138,18 +147,112 @@ final class HotkeyManager: ObservableObject {
         CGEvent.tapEnable(tap: tap, enable: true)
         keyEventTap = tap
         keyEventTapRunLoopSource = source
-        LocalLogger.shared.info("key_event_tap installed purpose=consume_fn_number_mode_switch")
+        LocalLogger.shared.info("key_event_tap installed purpose=consume_fn_shortcuts_and_hold_flags")
+    }
+
+    private func startHotkeyHealthWatchdog() {
+        hotkeyHealthTask?.cancel()
+        hotkeyHealthTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard isRunning else { continue }
+                repairKeyEventTapIfNeeded()
+            }
+        }
+    }
+
+    private func repairKeyEventTapIfNeeded() {
+        if let keyEventTap, !CFMachPortIsValid(keyEventTap) {
+            LocalLogger.shared.error("key_event_tap invalid restarting accessibility_trusted=\(PermissionsManager.shared.isAccessibilityTrusted(prompt: false))")
+            if let keyEventTapRunLoopSource {
+                CFRunLoopRemoveSource(CFRunLoopGetMain(), keyEventTapRunLoopSource, .commonModes)
+            }
+            self.keyEventTap = nil
+            self.keyEventTapRunLoopSource = nil
+            installKeyEventTap()
+            return
+        }
+
+        if let keyEventTap {
+            CGEvent.tapEnable(tap: keyEventTap, enable: true)
+        } else if PermissionsManager.shared.isAccessibilityTrusted(prompt: false) {
+            LocalLogger.shared.info("key_event_tap missing reinstalling accessibility_trusted=true")
+            installKeyEventTap()
+        }
+    }
+
+    private func reenableKeyEventTap(reason: CGEventType) {
+        guard let keyEventTap else {
+            installKeyEventTap()
+            return
+        }
+        CGEvent.tapEnable(tap: keyEventTap, enable: true)
+        LocalLogger.shared.info("key_event_tap reenabled reason=\(reason.rawValue)")
+    }
+
+    nonisolated private static let shortcutKeyCodes: Set<CGKeyCode> = [
+        18, 19, 20, 21,       // 1…4 modes
+        23, 22, 26, 28, 25, 29, 27, // 5…0 and - styles
+        50                    // ` / ~ hold-to-record toggle
+    ]
+
+    nonisolated private static let rightCommandDeviceFlag = CGEventFlags(rawValue: 0x00000010)
+    nonisolated private static let rightOptionDeviceFlag = CGEventFlags(rawValue: 0x00000040)
+
+    nonisolated private static func isShortcutKeyCode(_ keyCode: CGKeyCode) -> Bool {
+        shortcutKeyCodes.contains(keyCode)
+    }
+
+    nonisolated private static func shortcutModifierMatches(flags: CGEventFlags) -> Bool {
+        if flags.contains(.maskSecondaryFn) { return true }
+        let holdHotkeyKind = UserDefaults.standard.string(forKey: "holdHotkeyKind") ?? HotkeyKind.fnHold.rawValue
+        switch HotkeyKind(rawValue: holdHotkeyKind) ?? .fnHold {
+        case .fnHold:
+            return false
+        case .rightOptionHold:
+            return flags.contains(rightOptionDeviceFlag)
+        case .rightCommandHold:
+            return flags.contains(rightCommandDeviceFlag)
+        }
+    }
+
+    private func shortcutModifierMatches(event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.function) { return true }
+        switch AppSettings.shared.holdHotkeyKind {
+        case .fnHold:
+            return false
+        case .rightOptionHold:
+            return UInt64(event.modifierFlags.rawValue) & Self.rightOptionDeviceFlag.rawValue != 0
+        case .rightCommandHold:
+            return UInt64(event.modifierFlags.rawValue) & Self.rightCommandDeviceFlag.rawValue != 0
+        }
     }
 
     nonisolated private static let keyEventTapCallback: CGEventTapCallBack = { _, type, event, userInfo in
-        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
-        let flags = event.flags
-        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
-        guard flags.contains(.maskSecondaryFn), [18, 19, 20, 21, 23, 22, 26, 28, 25, 29].contains(keyCode), let userInfo else {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let userInfo {
+                let manager = Unmanaged<HotkeyManager>.fromOpaque(userInfo).takeUnretainedValue()
+                Task { @MainActor in manager.reenableKeyEventTap(reason: type) }
+            }
             return Unmanaged.passUnretained(event)
         }
 
+        guard let userInfo else { return Unmanaged.passUnretained(event) }
+        let flags = event.flags
+        let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
         let manager = Unmanaged<HotkeyManager>.fromOpaque(userInfo).takeUnretainedValue()
+
+        if type == .flagsChanged {
+            Task { @MainActor in
+                manager.handleFlagsChangedFromEventTap(keyCode: keyCode, flags: flags)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+
+        guard type == .keyDown, isShortcutKeyCode(keyCode), shortcutModifierMatches(flags: flags) else {
+            return Unmanaged.passUnretained(event)
+        }
+
         Task { @MainActor in
             manager.handleModeSwitchKeyCode(keyCode)
         }
@@ -157,15 +260,17 @@ final class HotkeyManager: ObservableObject {
     }
 
     private func shouldConsumeModeSwitchKey(_ event: NSEvent) -> Bool {
-        guard isPressed || event.modifierFlags.contains(.function) else { return false }
+        guard shortcutModifierMatches(event: event) else { return false }
         let key = event.charactersIgnoringModifiers ?? ""
-        return promptMode(for: key) != nil || writingStyle(for: key) != nil
+        return isHoldToRecordToggleKey(event) || promptMode(for: key) != nil || writingStyle(for: key) != nil
     }
 
     private func handleKeyDown(_ event: NSEvent) {
         guard shouldConsumeModeSwitchKey(event) else { return }
         let key = event.charactersIgnoringModifiers ?? ""
-        if let mode = promptMode(for: key) {
+        if isHoldToRecordToggleKey(event) {
+            toggleFnHoldToRecord()
+        } else if let mode = promptMode(for: key) {
             switchPromptMode(mode)
         } else if let style = writingStyle(for: key) {
             switchWritingStyle(style)
@@ -173,11 +278,38 @@ final class HotkeyManager: ObservableObject {
     }
 
     private func handleModeSwitchKeyCode(_ keyCode: CGKeyCode) {
-        if let mode = promptMode(forKeyCode: keyCode) {
+        if isHoldToRecordToggleKeyCode(keyCode) {
+            toggleFnHoldToRecord()
+        } else if let mode = promptMode(forKeyCode: keyCode) {
             switchPromptMode(mode)
         } else if let style = writingStyle(forKeyCode: keyCode) {
             switchWritingStyle(style)
         }
+    }
+
+    private func isHoldToRecordToggleKey(_ event: NSEvent) -> Bool {
+        event.keyCode == 50 || event.charactersIgnoringModifiers == "`" || event.charactersIgnoringModifiers == "~"
+    }
+
+    private func isHoldToRecordToggleKeyCode(_ keyCode: CGKeyCode) -> Bool {
+        keyCode == 50 // ANSI grave / tilde
+    }
+
+    private func toggleFnHoldToRecord() {
+        modeSwitchDuringHold = true
+        let isEnabled = !AppSettings.shared.fnHoldToRecordEnabled
+        AppSettings.shared.fnHoldToRecordEnabled = isEnabled
+        statusMessage = isEnabled
+            ? "Hold-to-record resumed: \(AppSettings.shared.holdHotkeyKind.shortTitle)."
+            : "Hold-to-record paused. Press Fn+` to resume."
+
+        if AudioRecorder.shared.state == .recording {
+            _ = try? AudioRecorder.shared.stopRecording()
+            AudioRecorder.shared.deleteLastRecordingIfNeeded(keepForDebugging: false)
+        }
+
+        FloatingHUDController.shared.show(.modeChanged, message: isEnabled ? "Fn recording on" : "Fn recording off")
+        LocalLogger.shared.info("fn_hold_to_record_toggled enabled=\(isEnabled)")
     }
 
     private func switchPromptMode(_ mode: PromptMode) {
@@ -224,6 +356,7 @@ final class HotkeyManager: ObservableObject {
         case "8": .formal
         case "9": .codingAgent
         case "0": .chat
+        case "-": .email
         default: nil
         }
     }
@@ -236,6 +369,7 @@ final class HotkeyManager: ObservableObject {
         case 28: .formal       // ANSI 8
         case 25: .codingAgent  // ANSI 9
         case 29: .chat         // ANSI 0
+        case 27: .email        // ANSI -
         default: nil
         }
     }
@@ -274,15 +408,54 @@ final class HotkeyManager: ObservableObject {
     }
 
     private func handleFlagsChanged(_ event: NSEvent) {
-        let fnIsDown = event.modifierFlags.contains(.function)
-        if fnIsDown && !isPressed {
+        guard let holdHotkeyIsDown = holdHotkeyState(from: event) else { return }
+        applyHoldHotkeyState(holdHotkeyIsDown)
+    }
+
+    private func handleFlagsChangedFromEventTap(keyCode: CGKeyCode, flags: CGEventFlags) {
+        guard let holdHotkeyIsDown = holdHotkeyState(keyCode: keyCode, flags: flags) else { return }
+        applyHoldHotkeyState(holdHotkeyIsDown)
+    }
+
+    private func applyHoldHotkeyState(_ holdHotkeyIsDown: Bool) {
+        if holdHotkeyIsDown && !isPressed {
+            guard AppSettings.shared.fnHoldToRecordEnabled else {
+                statusMessage = "Hold-to-record paused. Press Fn+` to resume."
+                return
+            }
             isPressed = true
             lastEvent = .pressed
             Task { await handlePress() }
-        } else if !fnIsDown && isPressed {
+        } else if !holdHotkeyIsDown && isPressed {
             isPressed = false
             lastEvent = .released
             Task { await handleRelease() }
+        }
+    }
+
+    private func holdHotkeyState(from event: NSEvent) -> Bool? {
+        switch AppSettings.shared.holdHotkeyKind {
+        case .fnHold:
+            return event.modifierFlags.contains(.function)
+        case .rightOptionHold:
+            guard event.keyCode == 61 else { return nil }
+            return event.modifierFlags.contains(.option)
+        case .rightCommandHold:
+            guard event.keyCode == 54 else { return nil }
+            return event.modifierFlags.contains(.command)
+        }
+    }
+
+    private func holdHotkeyState(keyCode: CGKeyCode, flags: CGEventFlags) -> Bool? {
+        switch AppSettings.shared.holdHotkeyKind {
+        case .fnHold:
+            return flags.contains(.maskSecondaryFn)
+        case .rightOptionHold:
+            guard keyCode == 61 else { return nil }
+            return flags.contains(Self.rightOptionDeviceFlag)
+        case .rightCommandHold:
+            guard keyCode == 54 else { return nil }
+            return flags.contains(Self.rightCommandDeviceFlag)
         }
     }
 
@@ -291,7 +464,7 @@ final class HotkeyManager: ObservableObject {
         lastError = ""
         lastTranscript = ""
         lastProcessedText = ""
-        statusMessage = "Fn pressed: starting recording…"
+        statusMessage = "\(AppSettings.shared.holdHotkeyKind.shortTitle) pressed: starting recording…"
 
         do {
             currentPasteTarget = PasteTarget.current
@@ -305,7 +478,7 @@ final class HotkeyManager: ObservableObject {
             recordingStartedAt = Date()
             FeedbackService.shared.recordingStarted()
             FloatingHUDController.shared.show(.listening, message: hudModeStyleLabel(for: currentEffectivePromptMode ?? AppSettings.shared.promptMode))
-            statusMessage = "Recording while Fn is held…"
+            statusMessage = "Recording while \(AppSettings.shared.holdHotkeyKind.shortTitle) is held…"
             scheduleMaximumRecordingTimeout()
 
             if AppSettings.shared.transcriptionMode == .realtimeMicrophoneStreaming {

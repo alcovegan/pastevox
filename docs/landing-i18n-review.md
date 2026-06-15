@@ -1,7 +1,7 @@
 # Лендинг PasteVox — ревью и правки переводов (i18n)
 
 **Дата:** 2026-06-15
-**Файл переводов:** `VoiceDock/landing/src/i18n.ts`
+**Файл переводов:** `landing/src/i18n.ts`
 **Локали:** `en` (база), `ru`, `es`, `fr`, `de`
 **Особый фокус (по запросу):** EN и RU
 
@@ -222,7 +222,7 @@ EN/ES остаются на 56px. Теперь каждая строка пос�
 ## Как пересобрать и посмотреть
 
 ```bash
-cd VoiceDock/landing
+cd landing
 npm run validate:i18n     # build + smoke-валидатор i18n (сейчас проходит)
 npm run dev               # локальный просмотр (Astro, host 127.0.0.1)
 ```

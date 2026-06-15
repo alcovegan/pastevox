@@ -99,7 +99,7 @@ open dist/PasteVox.app
 The script creates an ad-hoc signed local app bundle with generated `AppIcon.icns` at:
 
 ```text
-VoiceDock/dist/PasteVox.app
+dist/PasteVox.app
 ```
 
 ### Install to Applications
@@ -131,7 +131,7 @@ HUD shows the selected mode/style and collapses automatically. Mode/style switch
 Landing page source lives in `landing/` and is built with Astro. It has English and Russian static routes:
 
 ```bash
-cd VoiceDock/landing
+cd landing
 npm install
 npm run dev
 npm run build

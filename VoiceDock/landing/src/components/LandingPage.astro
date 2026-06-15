@@ -1,0 +1,212 @@
+---
+import { languages } from '../i18n';
+
+const { t } = Astro.props;
+const currentLanguage = languages.find((language) => language.code === t.lang) ?? languages[0];
+---
+<div class="page">
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="PasteVox home">
+        <span class="brand-mark"><img src="/assets/brand-mark.png" alt="" aria-hidden="true" /></span>
+        <span>PasteVox</span>
+      </a>
+      <div class="nav-links">
+        <a href="#workflow">{t.nav.workflow}</a>
+        <a href="#modes">{t.nav.modes}</a>
+        <a href="#features">{t.nav.features}</a>
+        <a href="#privacy">{t.nav.privacy}</a>
+        <a href="#setup">{t.nav.setup}</a>
+        <details class="language-menu">
+          <summary aria-label={t.nav.language}>
+            <span class="language-flag" aria-hidden="true">{currentLanguage.flag}</span>
+            <span>{currentLanguage.shortLabel}</span>
+          </summary>
+          <div class="language-options">
+            {languages.map((language) => (
+              <a class:list={["language-option", { active: language.code === t.lang }]} href={language.path} hreflang={language.code}>
+                <span class="language-flag" aria-hidden="true">{language.flag}</span>
+                <span>{language.label}</span>
+              </a>
+            ))}
+          </div>
+        </details>
+        <a class="button primary" href="#download">{t.nav.download}</a>
+      </div>
+    </div>
+  </nav>
+
+  <header id="top" class="hero">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> {t.hero.eyebrow}</div>
+      <h1>{t.hero.title.map((line) => <span>{line}</span>)}</h1>
+      <p class="hero-copy">{t.hero.copy}</p>
+      <div class="hero-actions">
+        <a class="button primary" href="../README.md">{t.hero.primary}</a>
+        <a class="button secondary" href="#setup">{t.hero.secondary}</a>
+      </div>
+      <div class="badges">
+        {t.hero.badges.map((badge) => <span class="badge">{badge}</span>)}
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-label="PasteVox interface preview">
+      <img class="hero-screen" src="/assets/screen-history.png" alt={t.hero.screenAlt} />
+      <img class="hud-shot" src="/assets/hud-listening.svg?v=5" alt={t.hero.hudAlt} />
+    </div>
+  </header>
+
+  <section class="proof-strip" aria-label="PasteVox principles">
+    {t.proof.map(([title, copy]) => <div class="proof-item"><strong>{title}</strong><span>{copy}</span></div>)}
+  </section>
+
+  <section id="workflow" class="section">
+    <div class="section-head">
+      <div class="kicker">{t.workflow.kicker}</div>
+      <h2>{t.workflow.title}</h2>
+      <p class="section-copy">{t.workflow.copy}</p>
+    </div>
+    <div class="workflow">
+      {t.workflow.cards.map(([num, title, copy]) => <div class="card"><div class="step-num">{num}</div><h3>{title}</h3><p>{copy}</p></div>)}
+    </div>
+  </section>
+
+  <section id="modes" class="section">
+    <div class="section-head">
+      <div class="kicker">{t.modes.kicker}</div>
+      <h2>{t.modes.title}</h2>
+      <p class="section-copy">{t.modes.copy}</p>
+    </div>
+    <div class="mode-grid">
+      {t.modes.cards.map((mode) => (
+        <article class="card mode-card">
+          <div class="mode-top">
+            <div class="mode-label">{mode.label}</div>
+            <div class="mode-hotkey">{mode.hotkey}</div>
+          </div>
+          <h3>{mode.title}</h3>
+          <p>{mode.copy}</p>
+          <span class="mode-style">{mode.style}</span>
+          <div class="mode-example"><strong>{t.modes.output}</strong>{mode.example}</div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section id="styles" class="section">
+    <div class="style-panel">
+      <div class="style-copy">
+        <div class="kicker">{t.styles.kicker}</div>
+        <h3>{t.styles.title}</h3>
+        <p>{t.styles.copy}</p>
+        <div class="style-hotkeys" aria-label="Writing style hotkeys">
+          {t.styles.hotkeys.map((hotkey) => <span>{hotkey}</span>)}
+        </div>
+      </div>
+      <div class="style-grid">
+        {t.styles.cards.map(([title, copy, featured]) => <div class:list={["style-card", { featured }]}><strong>{title}</strong><span>{copy}</span></div>)}
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <div class="section-head">
+      <div class="kicker">{t.features.kicker}</div>
+      <h2>{t.features.title}</h2>
+      <p class="section-copy">{t.features.copy}</p>
+    </div>
+    <div class="workspace-plain" aria-label="Minimal workspace layout without cards">
+      {t.features.rows.map((row) => (
+        <div class:list={["plain-row", { reverse: row.reverse }]}>
+          {row.reverse ? (
+            <>
+              <div class="plain-copy">
+                <div class="zigzag-kicker">{row.kind}</div>
+                <h3>{row.title}</h3>
+                <p>{row.copy}</p>
+                <ul class="plain-points">{row.points.map((point) => <li>{point}</li>)}</ul>
+              </div>
+              <img class="plain-screenshot" src={row.image} alt={row.alt} />
+            </>
+          ) : (
+            <>
+              <img class="plain-screenshot" src={row.image} alt={row.alt} />
+              <div class="plain-copy">
+                <div class="zigzag-kicker">{row.kind}</div>
+                <h3>{row.title}</h3>
+                <p>{row.copy}</p>
+                <ul class="plain-points">{row.points.map((point) => <li>{point}</li>)}</ul>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section id="privacy" class="section">
+    <div class="section-head">
+      <div class="kicker">{t.privacy.kicker}</div>
+      <h2>{t.privacy.title}</h2>
+      <p class="section-copy">{t.privacy.copy}</p>
+    </div>
+
+    <div class="privacy-receipt" aria-label="Privacy summary">
+      <div class="receipt-poster">
+        <div>
+          <div class="receipt-kicker">{t.privacy.posterKicker}</div>
+          <h3>{t.privacy.posterTitle.map((line) => <span>{line}</span>)}</h3>
+          <p>{t.privacy.posterCopy}</p>
+        </div>
+      </div>
+      <div class="receipt-sheet">
+        {t.privacy.rows.map(([label, tag, title, copy]) => (
+          <div class="receipt-row">
+            <div class="receipt-row-top">
+              <div class="receipt-label">{label}</div>
+              <div class="receipt-tag">{tag}</div>
+            </div>
+            <div>
+              <h4>{title}</h4>
+              <p>{copy}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section id="setup" class="section">
+    <div class="section-head">
+      <div class="kicker">{t.setup.kicker}</div>
+      <h2>{t.setup.title}</h2>
+      <p class="section-copy">{t.setup.copy} <strong>/Applications</strong> {t.setup.copyTail}</p>
+    </div>
+    <div class="setup-card">
+      {t.setup.steps.map(([num, title, copy, noteTitle, noteCopy]) => (
+        <article class="setup-step">
+          <div class="setup-top"><div class="setup-number">{num}</div></div>
+          <h3>{title}</h3>
+          <p>{copy}</p>
+          <div class="setup-note"><strong>{noteTitle}</strong>{noteCopy}</div>
+        </article>
+      ))}
+    </div>
+
+    <div id="download" class="cta">
+      <div>
+        <h2>{t.setup.ctaTitle}</h2>
+        <p class="section-copy">{t.setup.ctaCopy}</p>
+      </div>
+      <div class="cta-actions">
+        <a class="button primary" href="../README.md">{t.setup.build}</a>
+        <a class="button secondary" href="#top">{t.setup.top}</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>{t.footer[0]}</div>
+    <div>{t.footer[1]}</div>
+  </footer>
+</div>

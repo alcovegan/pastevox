@@ -1,0 +1,22 @@
+---
+import '../styles/landing.css';
+import { languages } from '../i18n';
+
+const { lang, title, description } = Astro.props;
+const canonicalPath = languages.find((language) => language.code === lang)?.path ?? '/';
+---
+<!doctype html>
+<html lang={lang}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalPath} />
+  {languages.map((language) => <link rel="alternate" hreflang={language.code} href={language.path} />)}
+  <link rel="alternate" hreflang="x-default" href="/" />
+</head>
+<body>
+  <slot name="body" />
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "pastevox-landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "validate:i18n": "npm run build && node scripts/validate-i18n.mjs"
+  },
+  "dependencies": {
+    "astro": "^6.4.6"
+  }
+}

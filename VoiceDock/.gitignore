@@ -6,3 +6,4 @@ Sources/VoiceDock/Resources/*.backup.png
 landing/.astro/
 landing/node_modules/
 landing/dist/
+landing/.wrangler/

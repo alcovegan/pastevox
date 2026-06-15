@@ -4,6 +4,9 @@ import { languages } from '../i18n';
 
 const { lang, title, description } = Astro.props;
 const canonicalPath = languages.find((language) => language.code === lang)?.path ?? '/';
+const abs = (path) => new URL(path, Astro.site ?? 'https://pastevox.app').href;
+const ogLocale = { en: 'en_US', ru: 'ru_RU', es: 'es_ES', fr: 'fr_FR', de: 'de_DE' }[lang] ?? 'en_US';
+const ogImage = abs('/assets/screen-history.png');
 ---
 <!doctype html>
 <html lang={lang}>
@@ -12,9 +15,21 @@ const canonicalPath = languages.find((language) => language.code === lang)?.path
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title}</title>
   <meta name="description" content={description} />
-  <link rel="canonical" href={canonicalPath} />
-  {languages.map((language) => <link rel="alternate" hreflang={language.code} href={language.path} />)}
-  <link rel="alternate" hreflang="x-default" href="/" />
+  <link rel="canonical" href={abs(canonicalPath)} />
+  {languages.map((language) => <link rel="alternate" hreflang={language.code} href={abs(language.path)} />)}
+  <link rel="alternate" hreflang="x-default" href={abs('/')} />
+  <link rel="icon" type="image/png" href="/assets/brand-mark.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="PasteVox" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={abs(canonicalPath)} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:locale" content={ogLocale} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
 </head>
 <body>
   <slot name="body" />

@@ -44,7 +44,7 @@ for (const locale of locales) {
 
   for (const alternate of locales) {
     const expectedHref = alternate.code === 'en' ? '/' : `/${alternate.code}/`;
-    const expectedTag = `hreflang="${alternate.code}" href="${expectedHref}"`;
+    const expectedTag = `hreflang="${alternate.code}" href="https://pastevox.app${expectedHref}"`;
     if (!html.includes(expectedTag)) {
       log('error', `missing_hreflang locale=${locale.code} expected=${expectedTag}`);
       process.exit(1);

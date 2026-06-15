@@ -4,8 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="PasteVox"
 PACKAGE_BINARY="PasteVox"
-CONFIG="${CONFIG:-debug}" # set CONFIG=release for distribution builds (CI)
-BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/$CONFIG"
+CONFIG="${CONFIG:-debug}"  # set CONFIG=release for distribution builds (CI)
+UNIVERSAL="${UNIVERSAL:-}"  # set UNIVERSAL=1 for an arm64 + x86_64 fat binary
+if [ -n "$UNIVERSAL" ]; then
+  # Universal builds land in .build/apple/Products/<Config> (capitalized config).
+  CONFIG_CAP="$(tr '[:lower:]' '[:upper:]' <<< "${CONFIG:0:1}")${CONFIG:1}"
+  BUILD_DIR="$ROOT_DIR/.build/apple/Products/$CONFIG_CAP"
+else
+  BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/$CONFIG"
+fi
 DIST_DIR="$ROOT_DIR/dist"
 APP_DIR="$DIST_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
@@ -20,7 +27,11 @@ mkdir -p "$DIST_DIR"
 rm -rf "$APP_DIR" "$ICONSET_DIR"
 
 cd "$ROOT_DIR"
-swift build -c "$CONFIG" --product "$PACKAGE_BINARY"
+if [ -n "$UNIVERSAL" ]; then
+  swift build -c "$CONFIG" --arch arm64 --arch x86_64 --product "$PACKAGE_BINARY"
+else
+  swift build -c "$CONFIG" --product "$PACKAGE_BINARY"
+fi
 
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$BUILD_DIR/$PACKAGE_BINARY" "$MACOS_DIR/$APP_NAME"

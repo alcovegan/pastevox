@@ -19,15 +19,16 @@ jobs:
       - name: Swift toolchain
         run: swift --version
 
-      - name: Build packaged .app (release)
+      - name: Build packaged .app (release, universal)
         env:
           CONFIG: release
+          UNIVERSAL: "1"
         run: ./scripts/build-app.sh
 
       - name: Zip app bundle
         run: |
           cd dist
-          ditto -c -k --sequesterRsrc --keepParent PasteVox.app "PasteVox-${GITHUB_REF_NAME}-macos-arm64.zip"
+          ditto -c -k --sequesterRsrc --keepParent PasteVox.app "PasteVox-${GITHUB_REF_NAME}-macos-universal.zip"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -36,6 +37,6 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           body: |
-            Native macOS menu-bar voice utility — Apple Silicon build, ad-hoc signed (not notarized).
+            Native macOS menu-bar voice utility — universal (Apple Silicon + Intel), ad-hoc signed (not notarized).
 
             **Install:** unzip → move `PasteVox.app` to `/Applications` → on first launch right-click → **Open** (or run `xattr -dr com.apple.quarantine /Applications/PasteVox.app`). Then grant **Microphone** and **Accessibility** in System Settings → Privacy & Security.
